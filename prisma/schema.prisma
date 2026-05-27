@@ -26,9 +26,10 @@ enum SessionStatus {
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
-  password  String
+  password  String?
   name      String
-  role      Role
+  role      Role     @default(PARTICIPANT)
+  googleId  String?  @unique
   createdAt DateTime @default(now())
 
   quizzes        Quiz[]
@@ -106,4 +107,12 @@ model PlayerAnswer {
   sessionPlayer SessionPlayer @relation(fields: [sessionPlayerId], references: [id])
   question      Question      @relation(fields: [questionId], references: [id])
   answers       Answer[]
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  email     String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
 }

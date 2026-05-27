@@ -187,7 +187,7 @@ export default function LoginPage() {
                   Password
                 </label>
                 <Link
-                  href="#"
+                  href="/forgot-password"
                   className="text-xs"
                   style={{ color: "#4B44CC" }}
                 >
@@ -262,6 +262,7 @@ export default function LoginPage() {
           {/* Google */}
           <button
             type="button"
+            onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
             className="w-full py-2.5 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition-opacity hover:opacity-80"
             style={{
               background: "#1A1A2E",
