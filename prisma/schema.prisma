@@ -1,0 +1,109 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ORGANIZER
+  PARTICIPANT
+}
+
+enum QuestionType {
+  SINGLE
+  MULTIPLE
+}
+
+enum SessionStatus {
+  WAITING
+  ACTIVE
+  FINISHED
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      Role
+  createdAt DateTime @default(now())
+
+  quizzes        Quiz[]
+  sessionPlayers SessionPlayer[]
+}
+
+model Quiz {
+  id              String   @id @default(cuid())
+  title           String
+  category        String
+  timePerQuestion Int      @default(30)
+  authorId        String
+  createdAt       DateTime @default(now())
+
+  author    User          @relation(fields: [authorId], references: [id])
+  questions Question[]
+  sessions  QuizSession[]
+}
+
+model Question {
+  id       String       @id @default(cuid())
+  quizId   String
+  text     String
+  imageUrl String?
+  type     QuestionType @default(SINGLE)
+  order    Int
+
+  quiz          Quiz           @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  answers       Answer[]
+  playerAnswers PlayerAnswer[]
+}
+
+model Answer {
+  id         String  @id @default(cuid())
+  questionId String
+  text       String
+  isCorrect  Boolean @default(false)
+
+  question      Question       @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  playerAnswers PlayerAnswer[]
+}
+
+model QuizSession {
+  id        String        @id @default(cuid())
+  quizId    String
+  roomCode  String        @unique
+  status    SessionStatus @default(WAITING)
+  startedAt DateTime?
+  createdAt DateTime      @default(now())
+
+  quiz    Quiz            @relation(fields: [quizId], references: [id])
+  players SessionPlayer[]
+}
+
+model SessionPlayer {
+  id        String   @id @default(cuid())
+  sessionId String
+  userId    String
+  score     Int      @default(0)
+  joinedAt  DateTime @default(now())
+
+  session       QuizSession    @relation(fields: [sessionId], references: [id])
+  user          User           @relation(fields: [userId], references: [id])
+  playerAnswers PlayerAnswer[]
+}
+
+model PlayerAnswer {
+  id              String   @id @default(cuid())
+  sessionPlayerId String
+  questionId      String
+  answeredAt      DateTime @default(now())
+  isCorrect       Boolean
+  points          Int      @default(0)
+
+  sessionPlayer SessionPlayer @relation(fields: [sessionPlayerId], references: [id])
+  question      Question      @relation(fields: [questionId], references: [id])
+  answers       Answer[]
+}
