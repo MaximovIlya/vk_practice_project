@@ -39,9 +39,11 @@ model User {
 model Quiz {
   id              String   @id @default(cuid())
   title           String
+  description     String   @default("")
   category        String
-  timePerQuestion Int      @default(30)
-  authorId        String
+  timePerQuestion    Int      @default(30)
+  pointsPerQuestion  Int      @default(1000)
+  authorId           String
   createdAt       DateTime @default(now())
 
   author    User          @relation(fields: [authorId], references: [id])
@@ -50,12 +52,15 @@ model Quiz {
 }
 
 model Question {
-  id       String       @id @default(cuid())
-  quizId   String
-  text     String
-  imageUrl String?
-  type     QuestionType @default(SINGLE)
-  order    Int
+  id        String       @id @default(cuid())
+  quizId    String
+  text      String
+  imageUrl  String?
+  type      QuestionType @default(SINGLE)
+  order     Int
+  tags      String[]     @default([])
+  timeLimit Int          @default(30)
+  points    Int          @default(1000)
 
   quiz          Quiz           @relation(fields: [quizId], references: [id], onDelete: Cascade)
   answers       Answer[]

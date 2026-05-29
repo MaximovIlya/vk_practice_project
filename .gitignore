@@ -45,7 +45,9 @@ CLAUDE.md
 /screenshots 
 
 /design 
+/components
 
 /.claude  
-
+client_id.txt
+client_secret.txt
 
