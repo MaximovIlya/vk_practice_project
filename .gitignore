@@ -44,8 +44,8 @@ CLAUDE.md
 .mcp.json 
 /screenshots 
 
-/design 
-/components
+# /design 
+# /components
 
 /.claude  
 client_id.txt

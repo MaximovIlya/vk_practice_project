@@ -294,23 +294,31 @@ export default function PlayPage() {
             </div>
 
             {/* Timer bar */}
-            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 28 }}>
-              <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 22, fontWeight: 800, width: 40, textAlign: "right", flexShrink: 0, color: timeLeft <= 5 ? "#FC6C85" : "#E8E8F0" }}>
-                {timeLeft}
-              </span>
-              <div style={{ flex: 1, height: 8, borderRadius: 4, background: "#1A1A2E", overflow: "hidden" }}>
-                <div style={{
-                  height: "100%", borderRadius: 4,
-                  background: timeLeft <= 5 ? "linear-gradient(90deg,#FC6C85,#E54170)" : "linear-gradient(90deg,#6C63FF,#4DC4FF)",
-                  width: `${(timeLeft / currentQuestion.timeLimit) * 100}%`,
-                  transition: "width 0.25s linear, background 0.3s",
-                }} />
-              </div>
-            </div>
+            {(() => {
+              const pct = (timeLeft / currentQuestion.timeLimit) * 100;
+              const timerColor = pct > 50 ? "#43D98F" : pct > 20 ? "#FFB547" : "#FF6584";
+              return (
+                <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 28 }}>
+                  <div style={{ flex: 1, height: 10, background: "rgba(255,255,255,0.06)", borderRadius: 5, overflow: "hidden", position: "relative" }}>
+                    <div style={{
+                      position: "absolute", left: 0, top: 0, bottom: 0,
+                      width: `${pct}%`,
+                      background: `linear-gradient(90deg, ${timerColor}aa, ${timerColor})`,
+                      borderRadius: 5,
+                      boxShadow: `0 0 20px ${timerColor}80`,
+                      transition: "width 0.25s linear",
+                    }} />
+                  </div>
+                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 22, fontWeight: 700, minWidth: 32, textAlign: "right", flexShrink: 0, color: timerColor }}>
+                    {timeLeft}
+                  </span>
+                </div>
+              );
+            })()}
 
             {/* Question card */}
             <div style={{ background: "#1A1A2E", border: "1px solid #2E2E4A", borderRadius: 16, padding: "36px 44px", textAlign: "center", marginBottom: 24 }}>
-              <div style={{ fontSize: 32, fontWeight: 700, letterSpacing: "-0.02em", lineHeight: 1.2 }}>
+              <div style={{ fontSize: 36, fontWeight: 700, letterSpacing: "-0.02em", lineHeight: 1.2 }}>
                 {currentQuestion.text}
               </div>
             </div>

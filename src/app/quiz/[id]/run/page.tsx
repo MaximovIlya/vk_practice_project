@@ -14,8 +14,13 @@ type QuizSession = { id: string; roomCode: string; status: string };
 
 type Phase = "WAITING" | "ACTIVE" | "REVEAL" | "FINISHED";
 
-const ANS_COLORS = ["#FC6C85", "#4DC4FF", "#FFB547", "#43D98F"];
-const ANS_BG     = ["rgba(252,108,133,0.15)", "rgba(77,196,255,0.15)", "rgba(255,181,71,0.15)", "rgba(67,217,143,0.15)"];
+const ANS_GRADIENTS = [
+  "linear-gradient(135deg,#FF6584 0%,#E54170 100%)",
+  "linear-gradient(135deg,#4DC4FF 0%,#2B7FE0 100%)",
+  "linear-gradient(135deg,#FFB547 0%,#E08512 100%)",
+  "linear-gradient(135deg,#43D98F 0%,#1FA269 100%)",
+];
+const ANS_LETTERS = ["A", "B", "C", "D"];
 
 function initials(name: string) {
   const p = name.trim().split(" ");
@@ -175,42 +180,56 @@ export default function RunQuizPage() {
 
       {/* ── Top bar ── */}
       <header style={{
-        flexShrink: 0, height: 56,
+        flexShrink: 0, height: 64,
         display: "flex", alignItems: "center", justifyContent: "space-between",
         padding: "0 32px",
         borderBottom: "1px solid #2E2E4A",
         position: "relative", zIndex: 5,
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          {/* Logo mark */}
+        {/* Left */}
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
           <div style={{ width: 28, height: 28, borderRadius: 8, background: "linear-gradient(135deg,#6C63FF,#FF6584)", boxShadow: "0 4px 20px rgba(108,99,255,0.4)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
             <svg width="16" height="11" viewBox="8 11 20 14" fill="none">
               <path d="M10.5825 18H13.0552L14.7036 13.055L18 22.946L19.649 18H25.418" stroke="white" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </div>
-          {/* Vertical separator */}
-          <div style={{ width: 1, height: 20, background: "#2E2E4A" }} />
-          <span style={{ fontSize: 14, color: "#A7A9BE" }}>
-            Hosting · <span style={{ color: "#E8E8F0", fontWeight: 500 }}>{quiz.title}</span>
-          </span>
+          {(phase === "ACTIVE" || phase === "REVEAL") ? (
+            <>
+              <div style={{ display: "inline-flex", alignItems: "center", padding: "4px 10px", borderRadius: 999, background: "rgba(108,99,255,0.15)", border: "1px solid rgba(108,99,255,0.3)", fontSize: 13, fontWeight: 600, color: "#B9B3FF", fontVariantNumeric: "tabular-nums" }}>
+                Q {qIdx + 1} / {quiz.questions.length}
+              </div>
+              <span style={{ fontSize: 14, color: "#A7A9BE" }}>{quiz.title}</span>
+            </>
+          ) : (
+            <>
+              <div style={{ width: 1, height: 20, background: "#2E2E4A" }} />
+              <span style={{ fontSize: 14, color: "#A7A9BE" }}>
+                Hosting · <span style={{ color: "#E8E8F0", fontWeight: 500 }}>{quiz.title}</span>
+              </span>
+            </>
+          )}
         </div>
 
-        {(phase === "ACTIVE" || phase === "REVEAL") ? (
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        {/* Right */}
+        {phase === "ACTIVE" && (
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "#A7A9BE" }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-              <span>{totalAnswered} / {players.length} answered</span>
+              <span style={{ fontVariantNumeric: "tabular-nums" }}>{totalAnswered} / {players.length} answered</span>
             </div>
-            <button onClick={endQuestion} style={{ height: 32, padding: "0 12px", borderRadius: 6, border: "1px solid #3D3D5F", background: "#24243E", color: "#A7A9BE", fontSize: 13, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>
-              End early
+            <button onClick={endQuestion} style={{ height: 32, padding: "0 12px", borderRadius: 6, border: "1px solid #3D3D5F", background: "#24243E", color: "#A7A9BE", fontSize: 13, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>End early</button>
+            <button onClick={endQuestion} style={{ display: "flex", alignItems: "center", gap: 6, height: 32, padding: "0 14px", borderRadius: 6, border: "none", background: "linear-gradient(180deg,#6C63FF,#4B44CC)", color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "Inter, sans-serif", boxShadow: "0 4px 12px rgba(108,99,255,0.35)" }}>
+              Skip <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
             </button>
-            {phase === "REVEAL" && (
-              <button onClick={nextQuestion} style={{ height: 32, padding: "0 14px", borderRadius: 6, border: "none", background: "linear-gradient(180deg,#6C63FF,#4B44CC)", color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "Inter, sans-serif", boxShadow: "0 4px 12px rgba(108,99,255,0.35)" }}>
-                {qIdx + 1 < quiz.questions.length ? "Next question →" : "Finish →"}
-              </button>
-            )}
           </div>
-        ) : (
+        )}
+        {phase === "REVEAL" && (
+          <button onClick={nextQuestion} style={{ display: "flex", alignItems: "center", gap: 6, height: 32, padding: "0 14px", borderRadius: 6, border: "none", background: "linear-gradient(180deg,#6C63FF,#4B44CC)", color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "Inter, sans-serif", boxShadow: "0 4px 12px rgba(108,99,255,0.35)" }}>
+            {qIdx + 1 < quiz.questions.length ? "Next question" : "Finish"}
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </button>
+        )}
+        {phase === "WAITING" && (
           <button onClick={() => window.location.href = "/dashboard"} style={{ height: 32, padding: "0 12px", borderRadius: 6, border: "none", background: "transparent", color: "#A7A9BE", fontSize: 13, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>
             End session
           </button>
@@ -364,116 +383,128 @@ export default function RunQuizPage() {
           </div>
         )}
 
-        {/* ══ ACTIVE ══ */}
-        {(phase === "ACTIVE" || phase === "REVEAL") && currentQuestion && (
-          <div style={{ flex: 1, display: "flex", gap: 0 }}>
-            {/* Left: question */}
-            <div style={{ flex: 1, padding: "40px 48px", display: "flex", flexDirection: "column" }}>
-              <div style={{ color: "#6E708A", fontSize: 13, marginBottom: 16 }}>
-                {currentQuestion.type === "SINGLE" ? "Single choice" : "Multiple choice"} · {currentQuestion.points.toLocaleString()} pts
-              </div>
+        {/* ══ ACTIVE / REVEAL ══ */}
+        {(phase === "ACTIVE" || phase === "REVEAL") && currentQuestion && (() => {
+          const totalVotes = Object.values(votes).reduce((s, v) => s + v, 0) || 1;
+          const correctCount = Object.entries(votes).filter(([id]) => correctIds.includes(id)).reduce((s, [, v]) => s + v, 0);
+          const accuracy = totalAnswered > 0 ? Math.round(correctCount / totalAnswered * 100) : 0;
+          const pct = currentQuestion.timeLimit > 0 ? (timeLeft / currentQuestion.timeLimit) * 100 : 0;
+          const timerColor = pct > 50 ? "#43D98F" : pct > 20 ? "#FFB547" : "#FF6584";
 
-              <div style={{ fontSize: 24, fontWeight: 700, lineHeight: 1.4, marginBottom: 32, maxWidth: 580 }}>
-                {currentQuestion.text}
-              </div>
+          return (
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
-              {/* Timer (ACTIVE only) */}
+              {/* Timer bar strip */}
               {phase === "ACTIVE" && (
-                <div style={{ marginBottom: 28, display: "flex", alignItems: "center", gap: 12 }}>
-                  <div style={{
-                    width: 64, height: 64, borderRadius: 14,
-                    background: timeLeft <= 5 ? "rgba(252,108,133,0.2)" : "rgba(67,217,143,0.15)",
-                    border: `2px solid ${timeLeft <= 5 ? "#FC6C85" : "#43D98F"}`,
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 28, fontWeight: 800,
-                    color: timeLeft <= 5 ? "#FC6C85" : "#43D98F",
-                  }}>
-                    {timeLeft}
+                <div style={{ padding: "20px 56px 0", flexShrink: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                    <div style={{ flex: 1, height: 10, background: "rgba(255,255,255,0.06)", borderRadius: 5, overflow: "hidden", position: "relative" }}>
+                      <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${pct}%`, background: `linear-gradient(90deg,${timerColor}aa,${timerColor})`, borderRadius: 5, boxShadow: `0 0 20px ${timerColor}80`, transition: "width 0.25s linear" }} />
+                    </div>
+                    <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 22, fontWeight: 700, minWidth: 32, textAlign: "right", color: timerColor, fontVariantNumeric: "tabular-nums" }}>{timeLeft}</span>
                   </div>
-                  <span style={{ color: "#6E708A", fontSize: 13 }}>seconds remaining</span>
                 </div>
               )}
 
-              {/* Answer options */}
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {currentQuestion.answers.map((ans, ai) => {
-                  const letter = String.fromCharCode(65 + ai);
-                  const voteCount = votes[ans.id] ?? 0;
-                  const totalVotes = Object.values(votes).reduce((s, v) => s + v, 0) || 1;
-                  const pct = Math.round((voteCount / totalVotes) * 100);
-                  const isCorrect = correctIds.includes(ans.id);
-                  const isReveal = phase === "REVEAL";
+              {/* Main content grid */}
+              <div style={{ flex: 1, padding: "28px 56px 40px", display: "grid", gridTemplateColumns: "1fr 360px", gap: 32, overflow: "hidden" }}>
 
-                  return (
-                    <div key={ans.id} style={{
-                      position: "relative", overflow: "hidden",
-                      borderRadius: 12, border: `1.5px solid ${isReveal ? (isCorrect ? "rgba(67,217,143,0.5)" : "rgba(46,46,74,0.5)") : ANS_BG[ai % 4]}`,
-                      background: isReveal ? (isCorrect ? "rgba(67,217,143,0.1)" : "rgba(26,26,46,0.5)") : "#1A1A2E",
-                      padding: "14px 16px",
-                      opacity: isReveal && !isCorrect ? 0.5 : 1,
-                    }}>
-                      {/* Vote bar */}
-                      {(phase === "REVEAL" || voteCount > 0) && (
-                        <div style={{
-                          position: "absolute", inset: 0, left: 0,
-                          width: `${pct}%`, background: isCorrect ? "rgba(67,217,143,0.12)" : "rgba(255,255,255,0.04)",
-                          transition: "width 0.4s ease",
-                        }} />
-                      )}
-                      <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 10 }}>
-                        <span style={{ width: 26, height: 26, borderRadius: 7, background: ANS_COLORS[ai % 4], display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "#fff", flexShrink: 0 }}>
-                          {letter}
-                        </span>
-                        <span style={{ flex: 1, fontSize: 15, color: isReveal && !isCorrect ? "#6E708A" : "#E8E8F0" }}>{ans.text}</span>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                          {voteCount > 0 && <span style={{ color: "#6E708A", fontSize: 13 }}>{voteCount}</span>}
-                          {isReveal && isCorrect && (
-                            <span style={{ color: "#43D98F", fontSize: 12, fontWeight: 600 }}>✓ Correct</span>
-                          )}
-                        </div>
+                {/* Left: question + tiles */}
+                <div style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
+                  {/* Meta + question text */}
+                  <div style={{ flexShrink: 0, marginBottom: 28 }}>
+                    {phase === "REVEAL" && (
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "#43D98F", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 700, marginBottom: 12 }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        Correct answer revealed
                       </div>
+                    )}
+                    <div style={{ fontSize: 12, color: "#6E708A", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600, marginBottom: 12 }}>
+                      {currentQuestion.type === "SINGLE" ? "Single choice" : "Multiple choice"} · {currentQuestion.points.toLocaleString()} pts
                     </div>
-                  );
-                })}
-              </div>
-
-              {/* REVEAL stats */}
-              {phase === "REVEAL" && (
-                <div style={{ marginTop: 24, display: "flex", gap: 16 }}>
-                  {[
-                    { label: "Correct", value: `${Object.entries(votes).filter(([id]) => correctIds.includes(id)).reduce((s,[,v])=>s+v,0)} / ${totalAnswered}` },
-                    { label: "Accuracy", value: `${totalAnswered > 0 ? Math.round(Object.entries(votes).filter(([id]) => correctIds.includes(id)).reduce((s,[,v])=>s+v,0) / totalAnswered * 100) : 0}%` },
-                  ].map(({ label, value }) => (
-                    <div key={label} style={{ padding: "10px 16px", borderRadius: 10, background: "#1A1A2E", border: "1px solid #2E2E4A" }}>
-                      <div style={{ color: "#6E708A", fontSize: 11, marginBottom: 2 }}>{label}</div>
-                      <div style={{ color: "#E8E8F0", fontWeight: 700, fontSize: 18 }}>{value}</div>
+                    <div style={{ fontSize: 44, fontWeight: 700, letterSpacing: "-0.02em", lineHeight: 1.15, maxWidth: 800 }}>
+                      {currentQuestion.text}
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Right: leaderboard */}
-            <aside style={{ width: 280, background: "#0D0C1A", borderLeft: "1px solid #2E2E4A", padding: "24px 16px", overflowY: "auto", flexShrink: 0 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 16 }}>
-                <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#43D98F", display: "inline-block", boxShadow: "0 0 5px #43D98F" }} />
-                <span style={{ color: "#E8E8F0", fontWeight: 600, fontSize: 13 }}>Live standings</span>
-              </div>
-              {players.slice(0, 10).map((p, i) => (
-                <div key={p.userId} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 8px", borderRadius: 8, marginBottom: 4, background: i === 0 ? "rgba(255,181,71,0.06)" : "transparent" }}>
-                  <span style={{ width: 20, fontSize: 12, fontWeight: 700, color: i < 3 ? "#FFB547" : "#6E708A", textAlign: "center" }}>#{i + 1}</span>
-                  <div style={{ width: 28, height: 28, borderRadius: "50%", background: avatarColor(p.name), display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700, color: "#fff", flexShrink: 0 }}>
-                    {initials(p.name)}
                   </div>
-                  <span style={{ flex: 1, fontSize: 13, color: "#E8E8F0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</span>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: i === 0 ? "#FFB547" : "#E8E8F0" }}>{p.score.toLocaleString()}</span>
+
+                  {/* Answer tiles 2×2 grid */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, flex: 1, alignContent: "start" }}>
+                    {currentQuestion.answers.map((ans, ai) => {
+                      const voteCount = votes[ans.id] ?? 0;
+                      const votePct = Math.round((voteCount / totalVotes) * 100);
+                      const isCorrect = correctIds.includes(ans.id);
+                      const isReveal = phase === "REVEAL";
+                      const dimmed = isReveal && !isCorrect;
+
+                      return (
+                        <div key={ans.id} style={{
+                          position: "relative", overflow: "hidden",
+                          borderRadius: 14, minHeight: 130,
+                          padding: "28px 120px 28px 88px",
+                          display: "flex", alignItems: "center",
+                          fontSize: 22, fontWeight: 600, color: "white",
+                          border: "1px solid rgba(255,255,255,0.08)",
+                          background: ANS_GRADIENTS[ai % 4],
+                          filter: dimmed ? "grayscale(0.7) brightness(0.45)" : "none",
+                          boxShadow: isReveal && isCorrect ? "0 0 0 3px #43D98F, 0 0 40px rgba(67,217,143,0.5)" : "none",
+                          transition: "filter 0.3s, box-shadow 0.3s",
+                        }}>
+                          {/* Letter chip */}
+                          <div style={{ position: "absolute", left: 20, top: "50%", transform: "translateY(-50%)", width: 52, height: 52, borderRadius: 12, background: "rgba(255,255,255,0.18)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, fontWeight: 800 }}>
+                            {ANS_LETTERS[ai % 4]}
+                          </div>
+                          {/* Answer text */}
+                          <span style={{ flex: 1 }}>{ans.text}</span>
+                          {/* Right: count + bar */}
+                          <div style={{ position: "absolute", right: 14, top: 14, bottom: 14, width: 84, display: "flex", flexDirection: "column", alignItems: "flex-end", justifyContent: "space-between" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                              {isReveal && isCorrect && (
+                                <div style={{ width: 24, height: 24, borderRadius: "50%", background: "white", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#43D98F" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                </div>
+                              )}
+                              <span style={{ fontSize: 28, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{voteCount}</span>
+                            </div>
+                            <div style={{ width: 80, height: 6, background: "rgba(0,0,0,0.3)", borderRadius: 3, overflow: "hidden" }}>
+                              <div style={{ width: `${votePct}%`, height: "100%", background: "white", transition: "width 0.4s ease" }} />
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
                 </div>
-              ))}
-              {players.length === 0 && <p style={{ color: "#6E708A", fontSize: 13 }}>No players yet</p>}
-              <p style={{ color: "#6E708A", fontSize: 11, marginTop: 12 }}>Updates after every question</p>
-            </aside>
-          </div>
-        )}
+
+                {/* Right: live standings card */}
+                <div style={{ background: "#1A1A2E", border: "1px solid #2E2E4A", borderRadius: 16, boxShadow: "0 1px 0 rgba(255,255,255,0.04) inset, 0 8px 24px rgba(0,0,0,0.3)", padding: 20, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexShrink: 0 }}>
+                    <div style={{ fontSize: 14, fontWeight: 600 }}>Live standings</div>
+                    <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 10px", borderRadius: 999, background: "rgba(67,217,143,0.12)", border: "1px solid rgba(67,217,143,0.3)", fontSize: 12, fontWeight: 600, color: "#43D98F" }}>
+                      <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#43D98F", display: "inline-block" }} />
+                      live
+                    </div>
+                  </div>
+                  <div style={{ flex: 1, overflowY: "auto" }}>
+                    {players.slice(0, 10).map((p, i) => (
+                      <div key={p.userId} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: "1px solid #2E2E4A" }}>
+                        <span style={{ width: 22, fontSize: 13, fontWeight: 700, color: i < 3 ? "#FFB547" : "#6E708A", fontVariantNumeric: "tabular-nums" }}>{i + 1}</span>
+                        <div style={{ width: 28, height: 28, borderRadius: "50%", background: avatarColor(p.name), display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "#fff", flexShrink: 0 }}>
+                          {initials(p.name)}
+                        </div>
+                        <span style={{ flex: 1, fontSize: 13, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</span>
+                        <span style={{ fontSize: 13, fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{p.score.toLocaleString()}</span>
+                      </div>
+                    ))}
+                    {players.length === 0 && <p style={{ color: "#6E708A", fontSize: 13 }}>No players yet</p>}
+                  </div>
+                  <div style={{ paddingTop: 12, fontSize: 12, color: "#6E708A", textAlign: "center", flexShrink: 0 }}>Updates after every question</div>
+                </div>
+
+              </div>
+            </div>
+          );
+        })()}
 
         {/* ══ FINISHED ══ */}
         {phase === "FINISHED" && (
