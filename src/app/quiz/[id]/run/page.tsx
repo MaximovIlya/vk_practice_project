@@ -52,18 +52,23 @@ export default function RunQuizPage() {
   const [revealSecs,  setRevealSecs]  = useState(5);
   const timerRef       = useRef<ReturnType<typeof setInterval> | null>(null);
   const revealTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const sessionInitRef = useRef(false);
 
   const currentQuestion: Question | null = quiz?.questions[qIdx] ?? null;
 
   // Load quiz + create/get session
   useEffect(() => {
     if (!params.id) return;
+    // Guard against React Strict Mode invoking this effect twice in dev — a
+    // double run would POST two sessions and leave an orphan WAITING room.
+    if (sessionInitRef.current) return;
+    sessionInitRef.current = true;
+    const reset = searchParams.get("reset") === "1";
     Promise.all([
       fetch(`/api/quiz/${params.id}`).then((r) => r.json()),
       fetch(`/api/quiz/${params.id}/session`).then((r) => r.json()),
     ]).then(([quizData, sessionData]) => {
       setQuiz(quizData);
-      const reset = searchParams.get("reset") === "1";
       if (sessionData && sessionData.id && sessionData.status === "FINISHED" && !reset) {
         // Quiz already finished — redirect to results instead of creating a new session
         router.replace(`/results/${sessionData.id}`);
@@ -76,10 +81,16 @@ export default function RunQuizPage() {
         })) ?? []);
       } else {
         // No session or ?reset=1 — create new session
-        fetch(`/api/quiz/${params.id}/session`, { method: "POST" })
+        fetch(`/api/quiz/${params.id}/session${reset ? "?reset=1" : ""}`, { method: "POST" })
           .then((r) => r.json())
           .then((s) => setQuizSession(s));
       }
+      // Strip ?reset=1 from the URL once the session is set up. Otherwise, after
+      // the quiz finishes and the organizer presses Back, they'd land on this
+      // page with reset=1 still in the URL and spawn yet another phantom session.
+      // Without reset, a Back navigation onto a FINISHED quiz hits the redirect
+      // to results above instead.
+      if (reset) router.replace(`/quiz/${params.id}/run`);
     });
   }, [params.id]);
 

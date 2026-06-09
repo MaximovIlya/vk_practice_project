@@ -9,7 +9,7 @@ import type { AnswerVotes } from "@/types/socket";
 
 type Answer      = { id: string; text: string };
 type Question    = { id: string; text: string; type: string; timeLimit: number; points: number; answers: Answer[] };
-type QuizData    = { id: string; title: string; hostName: string; questions: Question[] };
+type QuizData    = { id: string; title: string; hostName: string; scoring?: string; questions: Question[] };
 type SessionData = { id: string; roomCode: string; status: string };
 type Phase       = "LOADING" | "WAITING" | "ACTIVE" | "REVEAL" | "FINISHED";
 
@@ -49,6 +49,7 @@ export default function PlayPage() {
   const [correctCount, setCorrectCount] = useState(0);
   const [answerTimes,  setAnswerTimes]  = useState<number[]>([]);
   const [bestStreak,   setBestStreak]   = useState(0);
+  const [roundPoints,  setRoundPoints]  = useState(0); // points earned on the current question
   const streakRef = useRef(0);
 
   const timerRef      = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -66,6 +67,11 @@ export default function PlayPage() {
   const isCorrect = correctIds.length > 0 && selectedRef.current.length > 0 &&
     selectedRef.current.every(id => correctIds.includes(id)) &&
     correctIds.every(id => selectedRef.current.includes(id));
+
+  // Partial: earned some points but not the full amount (only possible for MULTIPLE questions)
+  const isPartial = !isCorrect && roundPoints > 0;
+  const correctlySelectedCount = selectedIds.filter(id => correctIds.includes(id)).length;
+  const wronglySelectedCount = selectedIds.filter(id => !correctIds.includes(id)).length;
 
   // Load session
   useEffect(() => {
@@ -108,12 +114,12 @@ export default function PlayPage() {
 
     socket.on("quiz-started", ({ questionIndex }) => {
       setQIdx(questionIndex); setSelectedIds([]); setSubmitted(false);
-      setVotes({}); setCorrectIds([]); setPhase("ACTIVE");
+      setVotes({}); setCorrectIds([]); setRoundPoints(0); setPhase("ACTIVE");
     });
 
     socket.on("question-started", ({ questionIndex, endsAt }) => {
       setQIdx(questionIndex); setSelectedIds([]); setSubmitted(false);
-      setVotes({}); setCorrectIds([]); setPhase("ACTIVE");
+      setVotes({}); setCorrectIds([]); setRoundPoints(0); setPhase("ACTIVE");
       const tick = () => {
         const left = Math.max(0, Math.ceil((endsAt - Date.now()) / 1000));
         setTimeLeft(left);
@@ -125,6 +131,8 @@ export default function PlayPage() {
     });
 
     socket.on("answer-received", ({ votes: v }) => setVotes(v));
+
+    socket.on("answer-result", ({ points }) => setRoundPoints(points));
 
     socket.on("question-ended", ({ correctAnswerIds, votes: v, questionIndex }) => {
       if (questionIndex !== undefined) setQIdx(questionIndex);
@@ -166,7 +174,7 @@ export default function PlayPage() {
       socket.off("connect", doJoin);
       socket.off("error"); socket.off("player-joined"); socket.off("player-left");
       socket.off("quiz-started"); socket.off("question-started");
-      socket.off("answer-received"); socket.off("question-ended");
+      socket.off("answer-received"); socket.off("answer-result"); socket.off("question-ended");
       socket.off("score-update"); socket.off("quiz-finished");
       if (timerRef.current) clearInterval(timerRef.current);
       disconnectSocket();
@@ -398,31 +406,70 @@ export default function PlayPage() {
             <div style={{ position: "relative", zIndex: 1, flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 48 }}>
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center", maxWidth: 640 }}>
 
-                <div style={{ width: 120, height: 120, borderRadius: "50%", background: isCorrect ? "linear-gradient(135deg,#4BB34B,#2E8B2E)" : "linear-gradient(135deg,#E64646,#C03030)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 24 }}>
+                <div style={{
+                  width: 120, height: 120, borderRadius: "50%",
+                  background: isCorrect
+                    ? "linear-gradient(135deg,#4BB34B,#2E8B2E)"
+                    : isPartial
+                      ? "linear-gradient(135deg,#FFA000,#E67600)"
+                      : "linear-gradient(135deg,#E64646,#C03030)",
+                  display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 24,
+                }}>
                   {isCorrect ? (
                     <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  ) : isPartial ? (
+                    /* half-check: one tick arm only */
+                    <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12"/>
+                      <line x1="4" y1="6" x2="8" y2="10"/>
+                    </svg>
                   ) : (
                     <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                   )}
                 </div>
 
-                <div style={{ fontSize: 14, color: isCorrect ? "#4BB34B" : "#E64646", textTransform: "uppercase" as const, letterSpacing: "0.12em", fontWeight: 700, marginBottom: 8 }}>
-                  {selectedIds.length === 0 ? "Время вышло!" : isCorrect ? "Правильно!" : "Неверно!"}
+                <div style={{
+                  fontSize: 14,
+                  color: isCorrect ? "#4BB34B" : isPartial ? "#FFA000" : "#E64646",
+                  textTransform: "uppercase" as const, letterSpacing: "0.12em", fontWeight: 700, marginBottom: 8,
+                }}>
+                  {selectedIds.length === 0
+                    ? "Время вышло!"
+                    : isCorrect
+                      ? "Правильно!"
+                      : isPartial
+                        ? "Частично верно!"
+                        : "Неверно!"}
                 </div>
 
-                {isCorrect && (
+                {(isCorrect || isPartial) && (
                   <>
                     <div style={{ fontSize: 56, fontWeight: 800, letterSpacing: "-0.03em", lineHeight: 1, marginBottom: 8 }}>
-                      <span style={{ background: "linear-gradient(135deg,#4BB34B,#0077FF)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
-                        +{currentQuestion.points.toLocaleString()} очков
+                      <span style={{
+                        background: isCorrect
+                          ? "linear-gradient(135deg,#4BB34B,#0077FF)"
+                          : "linear-gradient(135deg,#FFA000,#E67600)",
+                        WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
+                      }}>
+                        +{roundPoints.toLocaleString()} очков
                       </span>
                     </div>
                     <div style={{ fontSize: 14, color: "#909499", marginBottom: 28 }}>
-                      Базовые {currentQuestion.points.toLocaleString()} очков
+                      {isPartial
+                        ? `Верных: ${correctlySelectedCount}/${correctIds.length}${wronglySelectedCount > 0 ? ` · Лишних: ${wronglySelectedCount}` : ""}`
+                        : quiz.scoring === "speed"
+                          ? `С бонусом за скорость · из ${currentQuestion.points.toLocaleString()}`
+                          : quiz.scoring === "streak"
+                            ? `С множителем серии · базовые ${currentQuestion.points.toLocaleString()}`
+                            : `Базовые ${currentQuestion.points.toLocaleString()} очков`}
                     </div>
                   </>
                 )}
-                {!isCorrect && <div style={{ fontSize: 14, color: "#76787A", marginBottom: 28 }}>{selectedIds.length === 0 ? "Не успели ответить вовремя" : "В следующий раз повезёт!"}</div>}
+                {!isCorrect && !isPartial && (
+                  <div style={{ fontSize: 14, color: "#76787A", marginBottom: 28 }}>
+                    {selectedIds.length === 0 ? "Не успели ответить вовремя" : "В следующий раз повезёт!"}
+                  </div>
+                )}
 
                 {myRank > 0 && players.length > 0 && (
                   <div style={{ display: "flex", alignItems: "center", gap: 16, padding: "18px 28px", background: "#232324", border: "1px solid #363738", borderRadius: 16, marginBottom: 24 }}>
@@ -481,10 +528,17 @@ export default function PlayPage() {
                     ? Math.ceil(myRank / players.length * 100) : null;
                   const avgTime = answerTimes.length > 0
                     ? (answerTimes.reduce((a, b) => a + b, 0) / answerTimes.length).toFixed(1) : "—";
+                  const bestTime = answerTimes.length > 0
+                    ? Math.min(...answerTimes).toFixed(1) : "—";
+                  // The third stat depends on the quiz's scoring system: fastest
+                  // answer for the speed bonus, longest correct streak otherwise.
+                  const thirdStat = quiz.scoring === "speed"
+                    ? { label: "Лучшее время", value: bestTime === "—" ? "—" : `${bestTime} с`, color: "#FFA000" }
+                    : { label: "Лучшая серия", value: String(bestStreak), color: "#FFA000" };
                   const stats = [
                     { label: "Правильно", value: `${correctCount} / ${quiz.questions.length}`, color: "#4BB34B" },
                     { label: "Среднее время", value: avgTime === "—" ? "—" : `${avgTime} с`, color: "#E7E8EA" },
-                    { label: "Лучшая серия", value: String(bestStreak), color: "#FFA000" },
+                    thirdStat,
                   ];
                   return (
                     <>

@@ -7,7 +7,7 @@ function randomCode() {
   return Math.random().toString(36).substring(2, 8).toUpperCase();
 }
 
-export async function POST(_req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   if (!session || session.user.role !== "ORGANIZER") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -17,6 +17,31 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
   if (!quiz || quiz.authorId !== session.user.id) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
+
+  const reset = new URL(req.url).searchParams.get("reset") === "1";
+
+  // Reuse an existing non-finished session instead of creating a duplicate.
+  // Without this, the page's load effect (which React Strict Mode invokes twice
+  // in dev) creates two WAITING rooms — one gets played, the other lingers
+  // forever and keeps the dashboard "active quiz" banner alive.
+  if (!reset) {
+    const existing = await prisma.quizSession.findFirst({
+      where: { quizId: params.id, status: { not: "FINISHED" } },
+      orderBy: { createdAt: "desc" },
+    });
+    if (existing) {
+      // Drop any *other* abandoned empty rooms so only one stays open per quiz.
+      await prisma.quizSession.deleteMany({
+        where: { quizId: params.id, status: { not: "FINISHED" }, id: { not: existing.id }, players: { none: {} } },
+      });
+      return NextResponse.json(existing, { status: 200 });
+    }
+  }
+
+  // Creating fresh (reset or none open): clear abandoned empty rooms first.
+  await prisma.quizSession.deleteMany({
+    where: { quizId: params.id, status: { not: "FINISHED" }, players: { none: {} } },
+  });
 
   // Generate unique room code
   let roomCode = randomCode();
@@ -48,12 +73,9 @@ export async function DELETE(_req: Request, { params }: { params: { id: string }
   });
   if (!quizSession) return NextResponse.json({ ok: true });
 
-  // No onDelete: Cascade on these relations, so remove children first.
-  await prisma.$transaction([
-    prisma.playerAnswer.deleteMany({ where: { sessionPlayer: { sessionId: quizSession.id } } }),
-    prisma.sessionPlayer.deleteMany({ where: { sessionId: quizSession.id } }),
-    prisma.quizSession.delete({ where: { id: quizSession.id } }),
-  ]);
+  // SessionPlayer → PlayerAnswer cascade on delete, so removing the session
+  // is enough.
+  await prisma.quizSession.delete({ where: { id: quizSession.id } });
 
   return NextResponse.json({ ok: true });
 }

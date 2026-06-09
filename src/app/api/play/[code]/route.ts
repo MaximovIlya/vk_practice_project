@@ -37,6 +37,7 @@ export async function GET(_req: Request, { params }: { params: { code: string } 
     quiz: {
       id: quizSession.quiz.id,
       title: quizSession.quiz.title,
+      scoring: quizSession.quiz.scoring,
       hostName: quizSession.quiz.author.name ?? "Host",
       questions: quizSession.quiz.questions.map((q) => ({
         id: q.id,

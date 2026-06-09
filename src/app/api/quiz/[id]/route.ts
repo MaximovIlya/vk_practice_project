@@ -38,6 +38,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   }
 
   const data = await req.json();
+  const SCORING_MODES = ["standard", "speed", "streak"];
   const updated = await prisma.quiz.update({
     where: { id: params.id },
     data: {
@@ -46,6 +47,8 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
       category: data.category ?? quiz.category,
       timePerQuestion: data.timePerQuestion ?? quiz.timePerQuestion,
       pointsPerQuestion: data.pointsPerQuestion ?? quiz.pointsPerQuestion,
+      scoring: SCORING_MODES.includes(data.scoring) ? data.scoring : quiz.scoring,
+      archived: typeof data.archived === "boolean" ? data.archived : quiz.archived,
     },
   });
 
@@ -63,6 +66,8 @@ export async function DELETE(_req: Request, { params }: { params: { id: string }
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
+  // The session graph (QuizSession → SessionPlayer → PlayerAnswer) and the
+  // question graph cascade on delete, so removing the quiz is enough.
   await prisma.quiz.delete({ where: { id: params.id } });
   return NextResponse.json({ ok: true });
 }

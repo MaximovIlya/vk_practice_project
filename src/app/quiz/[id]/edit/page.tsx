@@ -217,7 +217,7 @@ export default function EditQuestionsPage() {
             Предпросмотр
           </button>
           <button
-            onClick={() => router.push(`/quiz/${quiz.id}/run`)}
+            onClick={() => router.push(`/quiz/${quiz.id}/run?reset=1`)}
             style={{
               display: "flex", alignItems: "center", gap: 6,
               padding: "7px 16px", borderRadius: 8, border: "none",
@@ -234,6 +234,55 @@ export default function EditQuestionsPage() {
           </button>
         </div>
       </header>
+
+      {/* ── Step indicator ── */}
+      <div style={{
+        flexShrink: 0,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        padding: "10px 20px",
+        borderBottom: "1px solid #363738",
+        background: "#19191A",
+      }}>
+        {/* Step 1 — back to quiz details */}
+        <Link
+          href={`/quiz/create?id=${quiz.id}`}
+          style={{ display: "flex", alignItems: "center", gap: 9, textDecoration: "none" }}
+        >
+          <div style={{
+            width: 26, height: 26, borderRadius: "50%", flexShrink: 0,
+            background: "#2C2D2E", border: "1px solid #363738",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 12, fontWeight: 700, color: "#909499",
+          }}>1</div>
+          <span style={{ fontSize: 13, fontWeight: 600, color: "#909499" }}>Детали квиза</span>
+        </Link>
+
+        <div style={{ width: 56, height: 2, background: "#363738", margin: "0 14px" }} />
+
+        {/* Step 2 — current */}
+        <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+          <div style={{
+            width: 26, height: 26, borderRadius: "50%", flexShrink: 0,
+            background: "linear-gradient(180deg, #0077FF, #005CC4)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 12, fontWeight: 700, color: "#fff",
+          }}>2</div>
+          <span style={{ fontSize: 13, fontWeight: 600, color: "#E7E8EA" }}>Вопросы</span>
+        </div>
+
+        <div style={{ width: 56, height: 2, background: "#363738", margin: "0 14px" }} />
+
+        {/* Step 3 — review & publish */}
+        <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+          <div style={{
+            width: 26, height: 26, borderRadius: "50%", flexShrink: 0,
+            background: "#2C2D2E", border: "1px solid #363738",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 12, fontWeight: 700, color: "#76787A",
+          }}>3</div>
+          <span style={{ fontSize: 13, fontWeight: 600, color: "#76787A" }}>Проверка и публикация</span>
+        </div>
+      </div>
 
       {/* ── Body ── */}
       <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>

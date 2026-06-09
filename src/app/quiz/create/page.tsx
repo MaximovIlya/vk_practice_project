@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 
 const CATEGORIES = ["Engineering", "Internal", "General", "Education", "Entertainment", "Science", "History", "Geography"];
@@ -46,8 +46,24 @@ function getInitials(name: string) {
 }
 
 export default function CreateQuizPage() {
+  // useSearchParams() must be inside a Suspense boundary in Next 14, otherwise
+  // it breaks the build / Fast Refresh. Wrap the real page in one.
+  return (
+    <Suspense fallback={<div style={{ background: "#19191A", minHeight: "100vh" }} />}>
+      <CreateQuizPageInner />
+    </Suspense>
+  );
+}
+
+function CreateQuizPageInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { data: session } = useSession();
+
+  // When opened with ?id=<quizId> the page edits an existing quiz's details
+  // (step 1) instead of creating a new one — this is how the questions screen
+  // lets the organizer step back.
+  const editId = searchParams.get("id");
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -57,6 +73,19 @@ export default function CreateQuizPage() {
   const [saving, setSaving] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
+  useEffect(() => {
+    if (!editId) return;
+    fetch(`/api/quiz/${editId}`)
+      .then((r) => r.json())
+      .then((q) => {
+        if (!q || q.error) return;
+        setTitle(q.title ?? "");
+        setDescription(q.description ?? "");
+        setCategory(q.category ?? "Engineering");
+        setScoring(q.scoring ?? "standard");
+      });
+  }, [editId]);
+
   const userName = session?.user?.name ?? "Вы";
   const initials = getInitials(userName);
 
@@ -64,8 +93,8 @@ export default function CreateQuizPage() {
     if (!title.trim()) return;
     setSaving(true);
     try {
-      const res = await fetch("/api/quiz", {
-        method: "POST",
+      const res = await fetch(editId ? `/api/quiz/${editId}` : "/api/quiz", {
+        method: editId ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title, description, category, scoring }),
       });
@@ -191,7 +220,7 @@ export default function CreateQuizPage() {
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#909499" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="9 18 15 12 9 6" />
           </svg>
-          <span style={{ fontSize: "14px", fontWeight: 500, color: "#E7E8EA" }}>Новый квиз</span>
+          <span style={{ fontSize: "14px", fontWeight: 500, color: "#E7E8EA" }}>{editId ? (title || "Редактирование квиза") : "Новый квиз"}</span>
         </div>
 
         <div style={{ display: "flex", gap: "8px" }}>
@@ -248,7 +277,13 @@ export default function CreateQuizPage() {
               <span style={{ fontSize: "14px", fontWeight: 600, color: "#E7E8EA" }}>Детали квиза</span>
             </div>
             <div style={{ width: "80px", height: "2px", background: "#363738", margin: "0 16px" }} />
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <div
+              onClick={() => { if (editId) router.push(`/quiz/${editId}/edit`); }}
+              style={{
+                display: "flex", alignItems: "center", gap: "10px",
+                cursor: editId ? "pointer" : "default",
+              }}
+            >
               <div style={{
                 width: "28px", height: "28px", borderRadius: "14px", flexShrink: 0,
                 background: "#2C2D2E", border: "1px solid #363738",
@@ -457,22 +492,13 @@ export default function CreateQuizPage() {
                   </p>
                 )}
 
-                <div style={{ display: "flex", alignItems: "center", gap: "14px", marginTop: description ? "0" : "16px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#76787A" strokeWidth="2" strokeLinecap="round">
-                      <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
-                    </svg>
-                    <span style={{ fontSize: "13px", color: "#76787A" }}>30 с на вопрос</span>
-                  </div>
-                  <span style={{ color: "#76787A", fontSize: "13px" }}>·</span>
-                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#76787A" strokeWidth="2" strokeLinecap="round">
-                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-                    </svg>
-                    <span style={{ fontSize: "13px", color: "#76787A" }}>
-                      {SCORING_OPTIONS.find((s) => s.id === scoring)?.label}
-                    </span>
-                  </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: description ? "0" : "16px" }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#76787A" strokeWidth="2" strokeLinecap="round">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                  </svg>
+                  <span style={{ fontSize: "13px", color: "#76787A" }}>
+                    {SCORING_OPTIONS.find((s) => s.id === scoring)?.label}
+                  </span>
                 </div>
               </div>
             </div>

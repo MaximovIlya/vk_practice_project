@@ -100,6 +100,26 @@ export function initSocketServer(httpServer: HTTPServer) {
         const revealState = sessionReveal.get(session.id);
         if (revealState) {
           socket.emit("question-ended", { ...revealState, questionIndex: idx });
+          // Also re-send how many points this player earned on the current
+          // question, so the reveal screen shows the real number (and the
+          // "partial credit" state) after a refresh/reconnect mid-reveal.
+          const questions = await prisma.question.findMany({
+            where: { quizId: session.quizId },
+            orderBy: { order: "asc" },
+            select: { id: true },
+          });
+          const currentQuestionId = questions[idx]?.id;
+          if (currentQuestionId) {
+            const myAnswer = await prisma.playerAnswer.findFirst({
+              where: { sessionPlayerId: sp.id, questionId: currentQuestionId },
+            });
+            if (myAnswer) {
+              socket.emit("answer-result", {
+                points: myAnswer.points,
+                isCorrect: myAnswer.isCorrect,
+              });
+            }
+          }
         } else {
           const endsAt = sessionEndsAt.get(session.id);
           if (endsAt !== undefined) {
@@ -150,7 +170,7 @@ export function initSocketServer(httpServer: HTTPServer) {
     socket.on("submit-answer", async ({ sessionId, questionId, answerIds, userId }) => {
       const session = await prisma.quizSession.findUnique({
         where: { id: sessionId },
-        include: { players: true },
+        include: { players: true, quiz: { select: { scoring: true } } },
       });
       if (!session || session.status !== "ACTIVE") return;
 
@@ -172,16 +192,44 @@ export function initSocketServer(httpServer: HTTPServer) {
         const correctlySelected = answerIds.filter((id) => correctIds.includes(id)).length;
         const wronglySelected = answerIds.filter((id) => !correctIds.includes(id)).length;
         isCorrect = correctlySelected === correctIds.length && wronglySelected === 0;
-        if (correctlySelected > 0 && correctIds.length > 0) {
-          const raw = (correctlySelected / correctIds.length) * question.points;
-          earnedPoints = Math.round(raw / 5) * 5;
-        } else {
-          earnedPoints = 0;
-        }
+        // Partial credit: each correct selection adds points, each wrong selection
+        // subtracts the same amount. Net is clamped to 0 so you can't go negative.
+        const net = Math.max(0, correctlySelected - wronglySelected);
+        earnedPoints = correctIds.length > 0
+          ? Math.round((net / correctIds.length) * question.points)
+          : 0;
       } else {
         isCorrect = answerIds.length === correctIds.length &&
           answerIds.every((id) => correctIds.includes(id));
         earnedPoints = isCorrect ? question.points : 0;
+      }
+
+      // Apply the quiz's scoring system on top of the base (correctness) points.
+      const mode = session.quiz.scoring;
+      if (earnedPoints > 0 && mode === "speed") {
+        // score = base_points * (remaining_time / total_time)
+        const endsAt = sessionEndsAt.get(sessionId);
+        const totalMs = question.timeLimit * 1000;
+        const remainingMs = endsAt ? Math.max(0, endsAt - Date.now()) : 0;
+        const factor = totalMs > 0 ? remainingMs / totalMs : 0;
+        earnedPoints = Math.round(earnedPoints * factor);
+      } else if (isCorrect && mode === "streak") {
+        // streak = consecutive correct answers ending with this one (counted from
+        // the player's prior answers, since this one isn't persisted yet).
+        const prior = await prisma.playerAnswer.findMany({
+          where: { sessionPlayerId: sp.id },
+          include: { question: { select: { order: true } } },
+        });
+        prior.sort((a, b) => a.question.order - b.question.order);
+        let streak = 1; // this correct answer
+        for (let i = prior.length - 1; i >= 0; i--) {
+          if (prior[i].isCorrect) streak++;
+          else break;
+        }
+        // The bonus only starts from the 2nd consecutive correct answer, so the
+        // first correct answer earns just the base points (multiplier 1.0).
+        // multiplier = 1 + (streak - 1) * 0.1  →  1.0, 1.1, 1.2, …
+        earnedPoints = Math.round(earnedPoints * (1 + (streak - 1) * 0.1));
       }
 
       await prisma.playerAnswer.create({
@@ -200,6 +248,11 @@ export function initSocketServer(httpServer: HTTPServer) {
           data: { score: { increment: earnedPoints } },
         });
       }
+
+      // Tell the submitting player exactly how many points they earned this
+      // round (after the speed/streak modifiers), so the reveal screen can show
+      // the real number instead of the base points.
+      socket.emit("answer-result", { points: earnedPoints, isCorrect });
 
       // Broadcast updated vote counts
       const votes = await getVotes(sessionId, questionId);

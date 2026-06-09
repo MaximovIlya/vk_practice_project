@@ -43,6 +43,8 @@ model Quiz {
   category        String
   timePerQuestion    Int      @default(30)
   pointsPerQuestion  Int      @default(1000)
+  scoring            String   @default("standard") // standard | speed | streak
+  archived           Boolean  @default(false)
   authorId           String
   createdAt       DateTime @default(now())
 
@@ -85,7 +87,7 @@ model QuizSession {
   startedAt DateTime?
   createdAt DateTime      @default(now())
 
-  quiz    Quiz            @relation(fields: [quizId], references: [id])
+  quiz    Quiz            @relation(fields: [quizId], references: [id], onDelete: Cascade)
   players SessionPlayer[]
 }
 
@@ -96,7 +98,7 @@ model SessionPlayer {
   score     Int      @default(0)
   joinedAt  DateTime @default(now())
 
-  session       QuizSession    @relation(fields: [sessionId], references: [id])
+  session       QuizSession    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   user          User           @relation(fields: [userId], references: [id])
   playerAnswers PlayerAnswer[]
 }
@@ -109,8 +111,8 @@ model PlayerAnswer {
   isCorrect       Boolean
   points          Int      @default(0)
 
-  sessionPlayer SessionPlayer @relation(fields: [sessionPlayerId], references: [id])
-  question      Question      @relation(fields: [questionId], references: [id])
+  sessionPlayer SessionPlayer @relation(fields: [sessionPlayerId], references: [id], onDelete: Cascade)
+  question      Question      @relation(fields: [questionId], references: [id], onDelete: Cascade)
   answers       Answer[]
 }
 

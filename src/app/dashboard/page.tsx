@@ -35,6 +35,7 @@ export default async function DashboardPage() {
       title: q.title,
       category: q.category,
       questionCount: q._count.questions,
+      archived: q.archived,
       totalPlays: q.sessions.reduce((sum, s) => sum + s._count.players, 0),
       lastRun:
         q.sessions
@@ -50,10 +51,39 @@ export default async function DashboardPage() {
       0
     );
 
-    const avgResult = await prisma.sessionPlayer.aggregate({
-      where: { session: { quiz: { authorId: session.user.id } } },
-      _avg: { score: true },
-    });
+    // Средний балл = доля правильных ответов (0–100%) по всем ответам игроков
+    // в квизах этого организатора. Считаем по записям PlayerAnswer, поэтому
+    // метрика естественно ограничена 100% и не зависит от настроек очков.
+    const answerScope = { sessionPlayer: { session: { quiz: { authorId: session.user.id } } } };
+
+    // Границы текущего и прошлого календарных месяцев — для дельты «к прошлому месяцу».
+    const now = new Date();
+    const startThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const thisMonthScope = { ...answerScope, answeredAt: { gte: startThisMonth } };
+    const lastMonthScope = { ...answerScope, answeredAt: { gte: startLastMonth, lt: startThisMonth } };
+
+    const [
+      answersTotal, answersCorrect,
+      thisMonthTotal, thisMonthCorrect,
+      lastMonthTotal, lastMonthCorrect,
+    ] = await Promise.all([
+      prisma.playerAnswer.count({ where: answerScope }),
+      prisma.playerAnswer.count({ where: { ...answerScope, isCorrect: true } }),
+      prisma.playerAnswer.count({ where: thisMonthScope }),
+      prisma.playerAnswer.count({ where: { ...thisMonthScope, isCorrect: true } }),
+      prisma.playerAnswer.count({ where: lastMonthScope }),
+      prisma.playerAnswer.count({ where: { ...lastMonthScope, isCorrect: true } }),
+    ]);
+    const avgScore = answersTotal > 0 ? Math.round((answersCorrect / answersTotal) * 100) : null;
+
+    // Дельта в процентных пунктах: средний балл за этот месяц минус за прошлый.
+    // null, если в одном из месяцев ответов не было — сравнивать не с чем.
+    const avgScoreDelta =
+      thisMonthTotal > 0 && lastMonthTotal > 0
+        ? Math.round((thisMonthCorrect / thisMonthTotal) * 100) -
+          Math.round((lastMonthCorrect / lastMonthTotal) * 100)
+        : null;
 
     const activeSession = await prisma.quizSession.findFirst({
       where: {
@@ -70,7 +100,8 @@ export default async function DashboardPage() {
         stats={{
           totalQuizzes: quizzes.length,
           totalPlays,
-          avgScore: avgResult._avg.score != null ? Math.round(avgResult._avg.score) : null,
+          avgScore,
+          avgScoreDelta,
           activeRooms,
         }}
         quizzes={quizzesData}
