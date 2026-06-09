@@ -26,27 +26,27 @@ export default function LoginPage() {
 
     setLoading(false);
     if (res?.error) {
-      setError("Invalid email or password");
+      setError("Неверный email или пароль");
     } else {
       router.push("/dashboard");
     }
   }
 
   return (
-    <div className="min-h-screen flex" style={{ background: "#07060F" }}>
+    <div className="min-h-screen flex" style={{ background: "#19191A" }}>
       {/* Left branding panel */}
       <div
         className="hidden lg:flex lg:w-1/2 flex-col justify-between p-12 relative overflow-hidden"
-        style={{ background: "#0F0E17" }}
+        style={{ background: "#232324" }}
       >
         {/* Decorative blurs */}
         <div
           className="absolute top-[-120px] left-[-80px] w-[400px] h-[400px] rounded-full opacity-20 blur-[100px]"
-          style={{ background: "#4B44CC" }}
+          style={{ background: "#0077FF" }}
         />
         <div
           className="absolute bottom-[-100px] right-[-60px] w-[300px] h-[300px] rounded-full opacity-15 blur-[80px]"
-          style={{ background: "#FFB547" }}
+          style={{ background: "#FFA000" }}
         />
 
         <div className="relative z-10 flex items-center gap-1">
@@ -62,40 +62,40 @@ export default function LoginPage() {
                 <feOffset dy="4"/>
                 <feGaussianBlur stdDeviation="10"/>
                 <feComposite in2="hardAlpha" operator="out"/>
-                <feColorMatrix type="matrix" values="0 0 0 0 0.423529 0 0 0 0 0.388235 0 0 0 0 1 0 0 0 0.4 0"/>
+                <feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0.467 0 0 0 0 1 0 0 0 0.4 0"/>
                 <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow"/>
                 <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow" result="shape"/>
               </filter>
               <linearGradient id="b_ll" x1="20" y1="16" x2="56" y2="52" gradientUnits="userSpaceOnUse">
-                <stop stopColor="#6C63FF"/>
-                <stop offset="1" stopColor="#FF6584"/>
+                <stop stopColor="#0077FF"/>
+                <stop offset="1" stopColor="#005CC4"/>
               </linearGradient>
             </defs>
           </svg>
-          <span className="text-2xl font-extrabold" style={{ color: "#FFFFFE" }}>
+          <span className="text-2xl font-extrabold" style={{ color: "#E7E8EA" }}>
             Pulse
           </span>
         </div>
 
         <div className="relative z-10 space-y-6">
-          <h1 className="text-4xl font-bold leading-tight" style={{ color: "#FFFFFE" }}>
-            Live quizzes,<br />real-time energy.
+          <h1 className="text-4xl font-bold leading-tight" style={{ color: "#E7E8EA" }}>
+            Живые викторины,<br />энергия в реальном времени.
           </h1>
-          <p className="text-base" style={{ color: "#6E708A" }}>
-            Build quizzes, host live rooms, and watch the leaderboard shift in milliseconds.
+          <p className="text-base" style={{ color: "#76787A" }}>
+            Создавай квизы, веди прямые эфиры и наблюдай за таблицей лидеров в реальном времени.
           </p>
 
           <div className="flex gap-8 pt-4">
             {[
-              { value: "12k+", label: "quizzes hosted" },
-              { value: "1.4M", label: "answers / day" },
-              { value: "34ms", label: "median latency" },
+              { value: "12k+", label: "квизов проведено" },
+              { value: "1.4M", label: "ответов в день" },
+              { value: "34ms", label: "медианная задержка" },
             ].map((stat) => (
               <div key={stat.label}>
-                <div className="text-2xl font-extrabold" style={{ color: "#FFFFFE" }}>
+                <div className="text-2xl font-extrabold" style={{ color: "#E7E8EA" }}>
                   {stat.value}
                 </div>
-                <div className="text-sm" style={{ color: "#6E708A" }}>
+                <div className="text-sm" style={{ color: "#76787A" }}>
                   {stat.label}
                 </div>
               </div>
@@ -103,8 +103,8 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <div className="relative z-10 text-sm" style={{ color: "#6E708A" }}>
-          © 2026 Pulse Labs · Privacy · Terms
+        <div className="relative z-10 text-sm" style={{ color: "#76787A" }}>
+          © 2026 Pulse Labs · Конфиденциальность · Условия
         </div>
       </div>
 
@@ -125,73 +125,73 @@ export default function LoginPage() {
                   <feOffset dy="4"/>
                   <feGaussianBlur stdDeviation="10"/>
                   <feComposite in2="hardAlpha" operator="out"/>
-                  <feColorMatrix type="matrix" values="0 0 0 0 0.423529 0 0 0 0 0.388235 0 0 0 0 1 0 0 0 0.4 0"/>
+                  <feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0.467 0 0 0 0 1 0 0 0 0.4 0"/>
                   <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow"/>
                   <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow" result="shape"/>
                 </filter>
                 <linearGradient id="b_lm" x1="20" y1="16" x2="56" y2="52" gradientUnits="userSpaceOnUse">
-                  <stop stopColor="#6C63FF"/>
-                  <stop offset="1" stopColor="#FF6584"/>
+                  <stop stopColor="#0077FF"/>
+                  <stop offset="1" stopColor="#005CC4"/>
                 </linearGradient>
               </defs>
             </svg>
-            <span className="text-xl font-extrabold" style={{ color: "#FFFFFE" }}>Pulse</span>
+            <span className="text-xl font-extrabold" style={{ color: "#E7E8EA" }}>Pulse</span>
           </div>
 
           {/* Badge */}
           <div className="inline-flex">
             <span
               className="text-xs font-semibold px-3 py-1 rounded-full"
-              style={{ background: "#1A1A2E", color: "#A7A9BE" }}
+              style={{ background: "rgba(0,119,255,0.12)", color: "#909499" }}
             >
-              Welcome back
+              С возвращением
             </span>
           </div>
 
           <div>
-            <h2 className="text-2xl font-bold" style={{ color: "#FFFFFE" }}>
-              Log in to Pulse
+            <h2 className="text-2xl font-bold" style={{ color: "#E7E8EA" }}>
+              Войти в Pulse
             </h2>
-            <p className="text-sm mt-1" style={{ color: "#6E708A" }}>
-              Pick up where you left off.
+            <p className="text-sm mt-1" style={{ color: "#76787A" }}>
+              Продолжи с того места, где остановился.
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Email */}
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold" style={{ color: "#A7A9BE" }}>
-                Email
+              <label className="text-xs font-semibold" style={{ color: "#909499" }}>
+                Электронная почта
               </label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="example.com"
+                placeholder="example@mail.ru"
                 required
                 className="w-full px-3 py-2.5 rounded-lg text-sm outline-none transition-colors"
                 style={{
-                  background: "#1A1A2E",
-                  border: "1px solid #3D3D5F",
-                  color: "#FFFFFE",
+                  background: "#232324",
+                  border: "1px solid #363738",
+                  color: "#E7E8EA",
                 }}
-                onFocus={(e) => (e.currentTarget.style.borderColor = "#4B44CC")}
-                onBlur={(e) => (e.currentTarget.style.borderColor = "#3D3D5F")}
+                onFocus={(e) => (e.currentTarget.style.borderColor = "#0077FF")}
+                onBlur={(e) => (e.currentTarget.style.borderColor = "#363738")}
               />
             </div>
 
             {/* Password */}
             <div className="space-y-1.5">
               <div className="flex justify-between items-center">
-                <label className="text-xs font-semibold" style={{ color: "#A7A9BE" }}>
-                  Password
+                <label className="text-xs font-semibold" style={{ color: "#909499" }}>
+                  Пароль
                 </label>
                 <Link
                   href="/forgot-password"
                   className="text-xs"
-                  style={{ color: "#4B44CC" }}
+                  style={{ color: "#0077FF" }}
                 >
-                  Forgot?
+                  Забыли?
                 </Link>
               </div>
               <div className="relative">
@@ -199,22 +199,22 @@ export default function LoginPage() {
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="your password"
+                  placeholder="ваш пароль"
                   required
                   className="w-full px-3 py-2.5 pr-10 rounded-lg text-sm outline-none transition-colors"
                   style={{
-                    background: "#1A1A2E",
-                    border: "1px solid #3D3D5F",
-                    color: "#FFFFFE",
+                    background: "#232324",
+                    border: "1px solid #363738",
+                    color: "#E7E8EA",
                   }}
-                  onFocus={(e) => (e.currentTarget.style.borderColor = "#4B44CC")}
-                  onBlur={(e) => (e.currentTarget.style.borderColor = "#3D3D5F")}
+                  onFocus={(e) => (e.currentTarget.style.borderColor = "#0077FF")}
+                  onBlur={(e) => (e.currentTarget.style.borderColor = "#363738")}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2"
-                  style={{ color: "#6E708A" }}
+                  style={{ color: "#76787A" }}
                 >
                   {showPassword ? (
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -233,7 +233,7 @@ export default function LoginPage() {
             </div>
 
             {error && (
-              <p className="text-xs" style={{ color: "#FF6584" }}>
+              <p className="text-xs" style={{ color: "#E64646" }}>
                 {error}
               </p>
             )}
@@ -244,19 +244,19 @@ export default function LoginPage() {
               disabled={loading}
               className="w-full py-2.5 rounded-[10px] text-sm font-semibold text-white transition-opacity disabled:opacity-60"
               style={{
-                background: "linear-gradient(135deg, #FFB547 0%, #FFB547 100%)",
-                boxShadow: "0px 8px 24px rgba(255,181,71,0.33)",
+                background: "linear-gradient(180deg, #0077FF 0%, #005CC4 100%)",
+                boxShadow: "0px 8px 24px rgba(0,119,255,0.33)",
               }}
             >
-              {loading ? "Logging in…" : "Log in"}
+              {loading ? "Вход…" : "Войти"}
             </button>
           </form>
 
           {/* Divider */}
           <div className="flex items-center gap-3">
-            <div className="flex-1 h-px" style={{ background: "#3D3D5F" }} />
-            <span className="text-xs" style={{ color: "#6E708A" }}>or</span>
-            <div className="flex-1 h-px" style={{ background: "#3D3D5F" }} />
+            <div className="flex-1 h-px" style={{ background: "#363738" }} />
+            <span className="text-xs" style={{ color: "#76787A" }}>или</span>
+            <div className="flex-1 h-px" style={{ background: "#363738" }} />
           </div>
 
           {/* Google */}
@@ -265,9 +265,9 @@ export default function LoginPage() {
             onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
             className="w-full py-2.5 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition-opacity hover:opacity-80"
             style={{
-              background: "#1A1A2E",
-              border: "1px solid #3D3D5F",
-              color: "#FFFFFE",
+              background: "#232324",
+              border: "1px solid #363738",
+              color: "#E7E8EA",
               boxShadow: "0px 4px 12px rgba(0,0,0,0.3)",
             }}
           >
@@ -277,13 +277,13 @@ export default function LoginPage() {
               <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
               <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
             </svg>
-            Continue with Google
+            Войти через Google
           </button>
 
-          <p className="text-center text-sm" style={{ color: "#6E708A" }}>
-            Don&apos;t have an account?{" "}
-            <Link href="/register" className="font-semibold" style={{ color: "#4B44CC" }}>
-              Register
+          <p className="text-center text-sm" style={{ color: "#76787A" }}>
+            Нет аккаунта?{" "}
+            <Link href="/register" className="font-semibold" style={{ color: "#0077FF" }}>
+              Зарегистрироваться
             </Link>
           </p>
         </div>

@@ -35,6 +35,29 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
   return NextResponse.json(quizSession, { status: 201 });
 }
 
+export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
+  const session = await getServerSession(authOptions);
+  if (!session || session.user.role !== "ORGANIZER") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Find the organizer's current (non-finished) session for this quiz
+  const quizSession = await prisma.quizSession.findFirst({
+    where: { quizId: params.id, status: { not: "FINISHED" }, quiz: { authorId: session.user.id } },
+    orderBy: { createdAt: "desc" },
+  });
+  if (!quizSession) return NextResponse.json({ ok: true });
+
+  // No onDelete: Cascade on these relations, so remove children first.
+  await prisma.$transaction([
+    prisma.playerAnswer.deleteMany({ where: { sessionPlayer: { sessionId: quizSession.id } } }),
+    prisma.sessionPlayer.deleteMany({ where: { sessionId: quizSession.id } }),
+    prisma.quizSession.delete({ where: { id: quizSession.id } }),
+  ]);
+
+  return NextResponse.json({ ok: true });
+}
+
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   if (!session || session.user.role !== "ORGANIZER") {
@@ -42,7 +65,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   }
 
   const latest = await prisma.quizSession.findFirst({
-    where: { quizId: params.id, status: { not: "FINISHED" } },
+    where: { quizId: params.id },
     orderBy: { createdAt: "desc" },
     include: {
       players: {

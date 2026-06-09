@@ -6,22 +6,36 @@ import { useRouter } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 
 const CATEGORIES = ["Engineering", "Internal", "General", "Education", "Entertainment", "Science", "History", "Geography"];
+const CATEGORY_LABELS: Record<string, string> = {
+  Engineering: "Технологии",
+  Internal: "Корпоративный",
+  General: "Общие знания",
+  Education: "Образование",
+  Entertainment: "Развлечения",
+  Science: "Наука",
+  History: "История",
+  Geography: "География",
+};
 const VISIBILITIES = ["Public", "Private · invite only"];
+const VISIBILITY_LABELS: Record<string, string> = {
+  "Public": "Публично",
+  "Private · invite only": "Приватно · только по приглашению",
+};
 const SCORING_OPTIONS = [
-  { id: "standard",    label: "Standard",    desc: "Points by correctness only" },
-  { id: "speed",       label: "Speed bonus", desc: "Faster answers earn more" },
-  { id: "streak",      label: "Streak",      desc: "Combo multiplier" },
+  { id: "standard",  label: "Стандарт",        desc: "Очки только за правильность" },
+  { id: "speed",     label: "Бонус за скорость", desc: "Быстрые ответы дают больше" },
+  { id: "streak",    label: "Серия",             desc: "Множитель комбо" },
 ];
 
 const CATEGORY_GRADIENTS: Record<string, string> = {
-  Engineering:   "linear-gradient(165deg, #FF6584 0%, rgba(255,101,132,0.6) 100%)",
-  Internal:      "linear-gradient(165deg, #6C63FF 0%, rgba(108,99,255,0.6) 100%)",
-  General:       "linear-gradient(165deg, #43D98F 0%, rgba(67,217,143,0.6) 100%)",
-  Education:     "linear-gradient(165deg, #FFB547 0%, rgba(255,181,71,0.6) 100%)",
-  Entertainment: "linear-gradient(165deg, #4DC4FF 0%, rgba(77,196,255,0.6) 100%)",
-  Science:       "linear-gradient(165deg, #06B6D4 0%, rgba(6,182,212,0.6) 100%)",
-  History:       "linear-gradient(165deg, #F97316 0%, rgba(249,115,22,0.6) 100%)",
-  Geography:     "linear-gradient(165deg, #14B8A6 0%, rgba(20,184,166,0.6) 100%)",
+  Engineering:    "linear-gradient(165deg, #E64646 0%, rgba(230,70,70,0.6) 100%)",
+  Internal:       "linear-gradient(165deg, #0077FF 0%, rgba(0,119,255,0.6) 100%)",
+  General:        "linear-gradient(165deg, #4BB34B 0%, rgba(75,179,75,0.6) 100%)",
+  Education:      "linear-gradient(165deg, #FFA000 0%, rgba(255,160,0,0.6) 100%)",
+  Entertainment:  "linear-gradient(165deg, #4DC4FF 0%, rgba(77,196,255,0.6) 100%)",
+  Science:        "linear-gradient(165deg, #06B6D4 0%, rgba(6,182,212,0.6) 100%)",
+  History:        "linear-gradient(165deg, #F97316 0%, rgba(249,115,22,0.6) 100%)",
+  Geography:      "linear-gradient(165deg, #14B8A6 0%, rgba(20,184,166,0.6) 100%)",
 };
 
 function getInitials(name: string) {
@@ -43,9 +57,8 @@ export default function CreateQuizPage() {
   const [saving, setSaving] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
-  const userName = session?.user?.name ?? "You";
+  const userName = session?.user?.name ?? "Вы";
   const initials = getInitials(userName);
-
 
   async function handleSave(andContinue: boolean) {
     if (!title.trim()) return;
@@ -66,15 +79,15 @@ export default function CreateQuizPage() {
   }
 
   return (
-    <div style={{ background: "#0F0E17", minHeight: "100vh", color: "#FFFFFE", fontFamily: "Inter, sans-serif" }}>
+    <div style={{ background: "#19191A", minHeight: "100vh", color: "#E7E8EA", fontFamily: "Inter, sans-serif" }}>
 
       {/* ── Nav ── */}
       <nav style={{
         position: "sticky", top: 0, zIndex: 10,
-        background: "rgba(15, 14, 23, 0.7)",
+        background: "rgba(25, 25, 26, 0.85)",
         backdropFilter: "blur(12px)",
         WebkitBackdropFilter: "blur(12px)",
-        borderBottom: "1px solid #2E2E4A",
+        borderBottom: "1px solid #363738",
         height: "65px",
         display: "flex", alignItems: "center", justifyContent: "space-between",
         padding: "0 32px",
@@ -83,8 +96,7 @@ export default function CreateQuizPage() {
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
             <div style={{
               width: "28px", height: "28px", borderRadius: "7.84px",
-              background: "linear-gradient(135deg, #6C63FF, #FF6584)",
-              boxShadow: "0 4px 20px rgba(108,99,255,0.4)",
+              background: "linear-gradient(180deg, #0077FF, #005CC4)",
               display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
             }}>
               <svg width="16" height="11" viewBox="8 11 20 14" fill="none">
@@ -95,12 +107,12 @@ export default function CreateQuizPage() {
             <span style={{ fontWeight: 800, fontSize: "20px", letterSpacing: "-0.02em" }}>Pulse</span>
           </div>
           <div style={{ display: "flex", gap: "4px" }}>
-            {(["Dashboard", "My Quizzes", "Analytics"] as const).map((label) => (
-              <Link key={label} href={label === "Dashboard" ? "/dashboard" : "#"} style={{
+            {(["Главная", "Мои квизы", "Аналитика"] as const).map((label) => (
+              <Link key={label} href={label === "Главная" ? "/dashboard" : "#"} style={{
                 fontSize: "14px", fontWeight: 500, cursor: "pointer",
-                color: label === "My Quizzes" ? "#FFFFFE" : "#A7A9BE",
+                color: label === "Мои квизы" ? "#E7E8EA" : "#909499",
                 padding: "8px 14px", borderRadius: "6px", textDecoration: "none",
-                background: label === "My Quizzes" ? "rgba(255,255,255,0.05)" : "transparent",
+                background: label === "Мои квизы" ? "rgba(255,255,255,0.05)" : "transparent",
               }}>
                 {label}
               </Link>
@@ -111,27 +123,27 @@ export default function CreateQuizPage() {
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
           <div style={{
             padding: "4px 10px", borderRadius: "999px",
-            background: "rgba(108,99,255,0.15)",
+            background: "rgba(0,119,255,0.12)",
             fontSize: "12px", fontWeight: 600, letterSpacing: "0.02em",
-            textTransform: "uppercase", color: "#B9B3FF",
+            textTransform: "uppercase", color: "#71AAEB",
           }}>
-            ORGANIZER
+            ОРГАНИЗАТОР
           </div>
           <div style={{ position: "relative" }}>
             <div onClick={() => setMenuOpen((v) => !v)} style={{
               display: "flex", alignItems: "center", gap: "10px",
               padding: "7px 15px 7px 7px", borderRadius: "999px",
-              background: "#24243E", border: "1px solid #2E2E4A",
+              background: "#2C2D2E", border: "1px solid #363738",
               cursor: "pointer", userSelect: "none",
             }}>
               <div style={{
                 width: "28px", height: "28px", borderRadius: "14px",
-                background: "linear-gradient(135deg, #6C63FF, #FF6584)",
+                background: "linear-gradient(180deg, #0077FF, #005CC4)",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 fontSize: "12px", fontWeight: 700, color: "#fff", flexShrink: 0,
               }}>{initials}</div>
               <span style={{ fontSize: "14px", fontWeight: 500 }}>{userName}</span>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6E708A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#76787A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
                 style={{ transform: menuOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.15s" }}>
                 <polyline points="6 9 12 15 18 9" />
               </svg>
@@ -141,15 +153,15 @@ export default function CreateQuizPage() {
                 <div onClick={() => setMenuOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 20 }} />
                 <div style={{
                   position: "absolute", top: "calc(100% + 8px)", right: 0, zIndex: 30,
-                  minWidth: "160px", background: "#1A1A2E",
-                  border: "1px solid #2E2E4A", borderRadius: "10px",
+                  minWidth: "160px", background: "#232324",
+                  border: "1px solid #363738", borderRadius: "10px",
                   boxShadow: "0 8px 24px rgba(0,0,0,0.4)", overflow: "hidden",
                 }}>
                   <button onClick={() => signOut({ callbackUrl: "/login" })} style={{
                     display: "flex", alignItems: "center", gap: "10px",
                     width: "100%", padding: "11px 14px",
                     background: "none", border: "none",
-                    color: "#FF6584", fontSize: "14px", fontWeight: 500,
+                    color: "#E64646", fontSize: "14px", fontWeight: 500,
                     cursor: "pointer", textAlign: "left",
                   }}>
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -157,7 +169,7 @@ export default function CreateQuizPage() {
                       <polyline points="16 17 21 12 16 7" />
                       <line x1="21" y1="12" x2="9" y2="12" />
                     </svg>
-                    Sign out
+                    Выйти
                   </button>
                 </div>
               </>
@@ -168,22 +180,20 @@ export default function CreateQuizPage() {
 
       {/* ── Sub-header: breadcrumb + buttons ── */}
       <div style={{
-        borderBottom: "1px solid #2E2E4A",
+        borderBottom: "1px solid #363738",
         display: "flex", alignItems: "center", justifyContent: "space-between",
         padding: "20px 48px 21px",
       }}>
-        {/* Breadcrumb */}
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <Link href="/dashboard" style={{ fontSize: "14px", color: "#A7A9BE", textDecoration: "none" }}>
-            My Quizzes
+          <Link href="/dashboard" style={{ fontSize: "14px", color: "#909499", textDecoration: "none" }}>
+            Мои квизы
           </Link>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#A7A9BE" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#909499" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="9 18 15 12 9 6" />
           </svg>
-          <span style={{ fontSize: "14px", fontWeight: 500, color: "#FFFFFE" }}>New quiz</span>
+          <span style={{ fontSize: "14px", fontWeight: 500, color: "#E7E8EA" }}>Новый квиз</span>
         </div>
 
-        {/* Action buttons */}
         <div style={{ display: "flex", gap: "8px" }}>
           <button
             onClick={() => handleSave(false)}
@@ -191,12 +201,12 @@ export default function CreateQuizPage() {
             style={{
               padding: "0 18px", height: "40px", borderRadius: "8px",
               background: "none", border: "none",
-              color: "#A7A9BE", fontSize: "14px", fontWeight: 600,
+              color: "#909499", fontSize: "14px", fontWeight: 600,
               cursor: title.trim() ? "pointer" : "not-allowed",
               opacity: title.trim() ? 1 : 0.5,
             }}
           >
-            Save draft
+            Сохранить черновик
           </button>
           <button
             onClick={() => handleSave(true)}
@@ -204,15 +214,15 @@ export default function CreateQuizPage() {
             style={{
               display: "flex", alignItems: "center", gap: "8px",
               padding: "0 18px", height: "40px", borderRadius: "8px",
-              background: "linear-gradient(180deg, #6C63FF 0%, #4B44CC 100%)",
-              boxShadow: "0 4px 16px rgba(108,99,255,0.35), inset 0 1px 0 rgba(255,255,255,0.2)",
+              background: "linear-gradient(180deg, #0077FF 0%, #005CC4 100%)",
+              boxShadow: "0 4px 16px rgba(0,119,255,0.35), inset 0 1px 0 rgba(255,255,255,0.2)",
               border: "none",
-              color: "#FFFFFE", fontSize: "14px", fontWeight: 600,
+              color: "#E7E8EA", fontSize: "14px", fontWeight: 600,
               cursor: title.trim() ? "pointer" : "not-allowed",
               opacity: title.trim() ? 1 : 0.5,
             }}
           >
-            Save &amp; continue
+            Сохранить и продолжить
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
             </svg>
@@ -228,134 +238,127 @@ export default function CreateQuizPage() {
 
           {/* Step indicator */}
           <div style={{ display: "flex", alignItems: "center", marginBottom: "8px" }}>
-            {/* Step 1 — active */}
             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
               <div style={{
                 width: "28px", height: "28px", borderRadius: "14px", flexShrink: 0,
-                background: "linear-gradient(135deg, #6C63FF, #FF6584)",
+                background: "linear-gradient(180deg, #0077FF, #005CC4)",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 fontSize: "13px", fontWeight: 700, color: "#fff",
               }}>1</div>
-              <span style={{ fontSize: "14px", fontWeight: 600, color: "#FFFFFE" }}>Quiz details</span>
+              <span style={{ fontSize: "14px", fontWeight: 600, color: "#E7E8EA" }}>Детали квиза</span>
             </div>
-            <div style={{ width: "80px", height: "2px", background: "#2E2E4A", margin: "0 16px" }} />
-            {/* Step 2 — inactive */}
+            <div style={{ width: "80px", height: "2px", background: "#363738", margin: "0 16px" }} />
             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
               <div style={{
                 width: "28px", height: "28px", borderRadius: "14px", flexShrink: 0,
-                background: "#24243E", border: "1px solid #2E2E4A",
+                background: "#2C2D2E", border: "1px solid #363738",
                 display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: "13px", fontWeight: 700, color: "#6E708A",
+                fontSize: "13px", fontWeight: 700, color: "#76787A",
               }}>2</div>
-              <span style={{ fontSize: "14px", fontWeight: 600, color: "#6E708A" }}>Questions</span>
+              <span style={{ fontSize: "14px", fontWeight: 600, color: "#76787A" }}>Вопросы</span>
             </div>
-            <div style={{ width: "80px", height: "2px", background: "#2E2E4A", margin: "0 16px" }} />
-            {/* Step 3 — inactive */}
+            <div style={{ width: "80px", height: "2px", background: "#363738", margin: "0 16px" }} />
             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
               <div style={{
                 width: "28px", height: "28px", borderRadius: "14px", flexShrink: 0,
-                background: "#24243E", border: "1px solid #2E2E4A",
+                background: "#2C2D2E", border: "1px solid #363738",
                 display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: "13px", fontWeight: 700, color: "#6E708A",
+                fontSize: "13px", fontWeight: 700, color: "#76787A",
               }}>3</div>
-              <span style={{ fontSize: "14px", fontWeight: 600, color: "#6E708A" }}>Review &amp; publish</span>
+              <span style={{ fontSize: "14px", fontWeight: 600, color: "#76787A" }}>Проверка и публикация</span>
             </div>
           </div>
 
-          {/* Heading */}
           <h1 style={{ fontSize: "32px", fontWeight: 700, letterSpacing: "-0.02em", margin: "0 0 4px" }}>
-            Tell us about your quiz
+            Расскажите о квизе
           </h1>
-          <p style={{ fontSize: "15px", color: "#A7A9BE", margin: "0 0 8px" }}>
-            You can tweak any of this later. Title and category help players find it.
+          <p style={{ fontSize: "15px", color: "#909499", margin: "0 0 8px" }}>
+            Вы можете изменить это позже. Название и категория помогут игрокам найти квиз.
           </p>
 
-          {/* Form */}
           <div style={{ display: "flex", flexDirection: "column", gap: "22px", paddingTop: "22px", width: "540px" }}>
 
             {/* Quiz title */}
             <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-              <label style={{ fontSize: "13px", fontWeight: 500, color: "#A7A9BE" }}>Quiz title</label>
+              <label style={{ fontSize: "13px", fontWeight: 500, color: "#909499" }}>Название квиза</label>
               <input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="Frontend Trivia · Sprint 14"
+                placeholder="Викторина по фронтенду · Спринт 14"
                 style={{
                   width: "100%", padding: "13px 15px", borderRadius: "8px",
-                  background: "#1A1A2E", border: "1px solid #2E2E4A",
-                  color: "#FFFFFE", fontSize: "15px", outline: "none",
+                  background: "#232324", border: "1px solid #363738",
+                  color: "#E7E8EA", fontSize: "15px", outline: "none",
                   boxSizing: "border-box",
                 }}
-                onFocus={(e) => (e.currentTarget.style.borderColor = "#6C63FF")}
-                onBlur={(e) => (e.currentTarget.style.borderColor = "#2E2E4A")}
+                onFocus={(e) => (e.currentTarget.style.borderColor = "#0077FF")}
+                onBlur={(e) => (e.currentTarget.style.borderColor = "#363738")}
               />
             </div>
 
             {/* Description */}
             <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-              <label style={{ fontSize: "13px", fontWeight: 500, color: "#A7A9BE" }}>
-                Description <span style={{ color: "#6E708A" }}>(optional)</span>
+              <label style={{ fontSize: "13px", fontWeight: 500, color: "#909499" }}>
+                Описание <span style={{ color: "#76787A" }}>(необязательно)</span>
               </label>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="A quick warm-up for the Friday demo — covers React, CSS quirks, and one cursed JavaScript question."
+                placeholder="Быстрая разминка для пятничного демо — охватывает React, CSS-хитрости и один проклятый вопрос по JavaScript."
                 rows={3}
                 style={{
                   width: "100%", padding: "12px 15px", borderRadius: "8px",
-                  background: "#1A1A2E", border: "1px solid #2E2E4A",
-                  color: "#FFFFFE", fontSize: "15px", lineHeight: "22.5px",
+                  background: "#232324", border: "1px solid #363738",
+                  color: "#E7E8EA", fontSize: "15px", lineHeight: "22.5px",
                   resize: "none", outline: "none", fontFamily: "Inter, sans-serif",
                   boxSizing: "border-box",
                 }}
-                onFocus={(e) => (e.currentTarget.style.borderColor = "#6C63FF")}
-                onBlur={(e) => (e.currentTarget.style.borderColor = "#2E2E4A")}
+                onFocus={(e) => (e.currentTarget.style.borderColor = "#0077FF")}
+                onBlur={(e) => (e.currentTarget.style.borderColor = "#363738")}
               />
             </div>
 
             {/* Category + Visibility */}
             <div style={{ display: "flex", gap: "14px" }}>
-              {/* Category */}
               <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "6px" }}>
-                <label style={{ fontSize: "13px", fontWeight: 500, color: "#A7A9BE" }}>Category</label>
+                <label style={{ fontSize: "13px", fontWeight: 500, color: "#909499" }}>Категория</label>
                 <div style={{ position: "relative" }}>
                   <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
                     style={{
                       width: "100%", padding: "13px 15px", paddingRight: "36px",
-                      borderRadius: "8px", background: "#1A1A2E", border: "1px solid #2E2E4A",
-                      color: "#FFFFFE", fontSize: "15px", outline: "none",
+                      borderRadius: "8px", background: "#232324", border: "1px solid #363738",
+                      color: "#E7E8EA", fontSize: "15px", outline: "none",
                       appearance: "none", cursor: "pointer",
                     }}
                   >
-                    {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                    {CATEGORIES.map((c) => <option key={c} value={c}>{CATEGORY_LABELS[c] ?? c}</option>)}
                   </select>
                   <svg style={{ position: "absolute", right: "14px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}
-                    width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6E708A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#76787A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <polyline points="6 9 12 15 18 9" />
                   </svg>
                 </div>
               </div>
 
-              {/* Visibility */}
               <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "6px" }}>
-                <label style={{ fontSize: "13px", fontWeight: 500, color: "#A7A9BE" }}>Visibility</label>
+                <label style={{ fontSize: "13px", fontWeight: 500, color: "#909499" }}>Видимость</label>
                 <div style={{ position: "relative" }}>
                   <select
                     value={visibility}
                     onChange={(e) => setVisibility(e.target.value)}
                     style={{
                       width: "100%", padding: "13px 15px", paddingRight: "36px",
-                      borderRadius: "8px", background: "#1A1A2E", border: "1px solid #2E2E4A",
-                      color: "#FFFFFE", fontSize: "15px", outline: "none",
+                      borderRadius: "8px", background: "#232324", border: "1px solid #363738",
+                      color: "#E7E8EA", fontSize: "15px", outline: "none",
                       appearance: "none", cursor: "pointer",
                     }}
                   >
-                    {VISIBILITIES.map((v) => <option key={v} value={v}>{v}</option>)}
+                    {VISIBILITIES.map((v) => <option key={v} value={v}>{VISIBILITY_LABELS[v] ?? v}</option>)}
                   </select>
                   <svg style={{ position: "absolute", right: "14px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}
-                    width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6E708A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#76787A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <polyline points="6 9 12 15 18 9" />
                   </svg>
                 </div>
@@ -364,7 +367,7 @@ export default function CreateQuizPage() {
 
             {/* Scoring */}
             <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-              <label style={{ fontSize: "13px", fontWeight: 500, color: "#A7A9BE" }}>Scoring</label>
+              <label style={{ fontSize: "13px", fontWeight: 500, color: "#909499" }}>Система подсчёта</label>
               <div style={{ display: "flex", gap: "10px" }}>
                 {SCORING_OPTIONS.map((opt) => (
                   <button
@@ -372,14 +375,14 @@ export default function CreateQuizPage() {
                     onClick={() => setScoring(opt.id)}
                     style={{
                       flex: 1, padding: "13px 15px", borderRadius: "10px", textAlign: "left",
-                      background: scoring === opt.id ? "rgba(108,99,255,0.08)" : "transparent",
-                      border: `1px solid ${scoring === opt.id ? "#6C63FF" : "#2E2E4A"}`,
+                      background: scoring === opt.id ? "rgba(0,119,255,0.08)" : "transparent",
+                      border: `1px solid ${scoring === opt.id ? "#0077FF" : "#363738"}`,
                       cursor: "pointer",
                       display: "flex", flexDirection: "column", gap: "2px",
                     }}
                   >
-                    <span style={{ fontSize: "14px", fontWeight: 600, color: "#FFFFFE" }}>{opt.label}</span>
-                    <span style={{ fontSize: "12px", color: "#6E708A", textAlign: "left" }}>{opt.desc}</span>
+                    <span style={{ fontSize: "14px", fontWeight: 600, color: "#E7E8EA" }}>{opt.label}</span>
+                    <span style={{ fontSize: "12px", color: "#76787A", textAlign: "left" }}>{opt.desc}</span>
                   </button>
                 ))}
               </div>
@@ -390,42 +393,39 @@ export default function CreateQuizPage() {
         {/* ── Right column: live preview ── */}
         <div style={{
           flex: 1,
-          background: "#07060F",
-          borderLeft: "1px solid #2E2E4A",
+          background: "#19191A",
+          borderLeft: "1px solid #363738",
           padding: "48px 40px 48px 41px",
           position: "relative",
           overflow: "hidden",
           overflowY: "auto",
         }}>
-          {/* Decorative blur blob */}
           <div style={{
             position: "absolute",
             width: "400px", height: "400px", borderRadius: "50%",
-            background: "radial-gradient(circle at 50% 50%, rgba(108,99,255,1) 0%, rgba(108,99,255,0) 60%)",
+            background: "radial-gradient(circle at 50% 50%, rgba(0,119,255,1) 0%, rgba(0,119,255,0) 60%)",
             top: "-200px", left: "70px",
-            opacity: 0.2, filter: "blur(40px)", pointerEvents: "none",
+            opacity: 0.15, filter: "blur(40px)", pointerEvents: "none",
           }} />
 
           <div style={{ position: "relative", display: "flex", flexDirection: "column", gap: "15px" }}>
             <span style={{
               fontSize: "12px", fontWeight: 600, letterSpacing: "0.08em",
-              textTransform: "uppercase", color: "#6E708A",
+              textTransform: "uppercase", color: "#76787A",
             }}>
-              Live preview
+              Предпросмотр
             </span>
 
-            {/* Preview card */}
             <div style={{
               width: "460px",
-              background: "#1A1A2E", border: "1px solid #2E2E4A", borderRadius: "12px",
+              background: "#232324", border: "1px solid #363738", borderRadius: "12px",
               boxShadow: "0 8px 24px rgba(0,0,0,0.3), inset 0 1px 0 1px rgba(255,255,255,0.04)",
               overflow: "hidden",
             }}>
-              {/* Cover image area */}
               <div style={{
                 margin: "25px 25px 0",
                 height: "152px", borderRadius: "10px",
-                background: title ? (CATEGORY_GRADIENTS[category] ?? CATEGORY_GRADIENTS.Engineering) : "linear-gradient(161deg, #FF6584 0%, rgba(255,101,132,0.6) 100%)",
+                background: title ? (CATEGORY_GRADIENTS[category] ?? CATEGORY_GRADIENTS.Engineering) : "linear-gradient(161deg, #E64646 0%, rgba(230,70,70,0.6) 100%)",
                 display: "flex", flexDirection: "column",
                 alignItems: "center", justifyContent: "center", gap: "8px",
               }}>
@@ -433,83 +433,77 @@ export default function CreateQuizPage() {
                   <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" />
                   <polyline points="21 15 16 10 5 21" />
                 </svg>
-                <span style={{ fontSize: "13px", color: "rgba(255,255,255,0.85)" }}>Tap to set a cover image</span>
+                <span style={{ fontSize: "13px", color: "rgba(255,255,255,0.85)" }}>Нажмите для выбора обложки</span>
               </div>
 
-              {/* Card body */}
               <div style={{ padding: "0 25px 25px" }}>
-                {/* Category badge */}
                 <div style={{
                   display: "inline-flex", alignItems: "center",
                   padding: "4px 10px 3px", borderRadius: "999px",
-                  background: "rgba(255,101,132,0.12)", marginTop: "16px", marginBottom: "8px",
+                  background: "rgba(230,70,70,0.12)", marginTop: "16px", marginBottom: "8px",
                 }}>
-                  <span style={{ fontSize: "12px", fontWeight: 600, letterSpacing: "0.02em", textTransform: "uppercase", color: "#FF6584" }}>
-                    {category}
+                  <span style={{ fontSize: "12px", fontWeight: 600, letterSpacing: "0.02em", textTransform: "uppercase", color: "#E64646" }}>
+                    {CATEGORY_LABELS[category] ?? category}
                   </span>
                 </div>
 
-                {/* Title */}
-                <p style={{ fontSize: "20px", fontWeight: 700, margin: "0 0 8px", color: "#FFFFFE", minHeight: "28px" }}>
-                  {title || <span style={{ color: "#6E708A", fontWeight: 400, fontSize: "16px" }}>Your quiz title will appear here</span>}
+                <p style={{ fontSize: "20px", fontWeight: 700, margin: "0 0 8px", color: "#E7E8EA", minHeight: "28px" }}>
+                  {title || <span style={{ color: "#76787A", fontWeight: 400, fontSize: "16px" }}>Здесь появится название квиза</span>}
                 </p>
 
-                {/* Description */}
                 {description && (
-                  <p style={{ fontSize: "14px", lineHeight: "21px", color: "#A7A9BE", margin: "0 0 16px" }}>
+                  <p style={{ fontSize: "14px", lineHeight: "21px", color: "#909499", margin: "0 0 16px" }}>
                     {description}
                   </p>
                 )}
 
-                {/* Meta */}
                 <div style={{ display: "flex", alignItems: "center", gap: "14px", marginTop: description ? "0" : "16px" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6E708A" strokeWidth="2" strokeLinecap="round">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#76787A" strokeWidth="2" strokeLinecap="round">
                       <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
                     </svg>
-                    <span style={{ fontSize: "13px", color: "#6E708A" }}>30 s per question</span>
+                    <span style={{ fontSize: "13px", color: "#76787A" }}>30 с на вопрос</span>
                   </div>
-                  <span style={{ color: "#6E708A", fontSize: "13px" }}>·</span>
+                  <span style={{ color: "#76787A", fontSize: "13px" }}>·</span>
                   <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6E708A" strokeWidth="2" strokeLinecap="round">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#76787A" strokeWidth="2" strokeLinecap="round">
                       <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
                     </svg>
-                    <span style={{ fontSize: "13px", color: "#6E708A" }}>
-                      {SCORING_OPTIONS.find((s) => s.id === scoring)?.label} scoring
+                    <span style={{ fontSize: "13px", color: "#76787A" }}>
+                      {SCORING_OPTIONS.find((s) => s.id === scoring)?.label}
                     </span>
                   </div>
                 </div>
               </div>
             </div>
 
-            <p style={{ fontSize: "13px", color: "#6E708A", textAlign: "center" }}>
-              Players see this card before joining.
+            <p style={{ fontSize: "13px", color: "#76787A", textAlign: "center" }}>
+              Игроки видят эту карточку перед входом.
             </p>
           </div>
         </div>
       </div>
 
-      {/* Slider thumb styles */}
       <style>{`
         input[type=range]::-webkit-slider-thumb {
           -webkit-appearance: none;
           width: 30px; height: 30px;
           border-radius: 50%;
-          background: linear-gradient(135deg, #6C63FF, #FF6584);
-          box-shadow: 0 4px 12px rgba(108,99,255,0.4);
+          background: linear-gradient(180deg, #0077FF, #005CC4);
+          box-shadow: 0 4px 12px rgba(0,119,255,0.4);
           cursor: pointer;
           margin-top: -12px;
         }
         input[type=range]::-moz-range-thumb {
           width: 30px; height: 30px;
           border-radius: 50%; border: none;
-          background: linear-gradient(135deg, #6C63FF, #FF6584);
-          box-shadow: 0 4px 12px rgba(108,99,255,0.4);
+          background: linear-gradient(180deg, #0077FF, #005CC4);
+          box-shadow: 0 4px 12px rgba(0,119,255,0.4);
           cursor: pointer;
         }
         input[type=range]::-webkit-slider-runnable-track { height: 6px; }
         input[type=range]::-moz-range-track { height: 6px; background: transparent; }
-        select option { background: #1A1A2E; color: #FFFFFE; }
+        select option { background: #232324; color: #E7E8EA; }
       `}</style>
     </div>
   );

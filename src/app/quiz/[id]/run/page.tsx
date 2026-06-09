@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { getSocket, disconnectSocket } from "@/lib/socket";
 import type { Player, AnswerVotes } from "@/types/socket";
@@ -27,7 +26,7 @@ function initials(name: string) {
   return (p[0][0] + (p[1]?.[0] ?? "")).toUpperCase();
 }
 
-const AVATAR_COLORS = ["#6C63FF","#FF6584","#43D98F","#FFB547","#4DC4FF","#F97316","#14B8A6","#A78BFA"];
+const AVATAR_COLORS = ["#0077FF","#E64646","#4BB34B","#FFA000","#4DC4FF","#F97316","#14B8A6","#A78BFA"];
 function avatarColor(name: string) {
   let h = 0;
   for (const c of name) h = (h * 31 + c.charCodeAt(0)) & 0xffff;
@@ -35,7 +34,9 @@ function avatarColor(name: string) {
 }
 
 export default function RunQuizPage() {
-  const params   = useParams<{ id: string }>();
+  const params       = useParams<{ id: string }>();
+  const router       = useRouter();
+  const searchParams = useSearchParams();
   const { data: session } = useSession();
 
   const [quiz,        setQuiz]        = useState<Quiz | null>(null);
@@ -48,7 +49,9 @@ export default function RunQuizPage() {
   const [totalAnswered, setTotalAnswered] = useState(0);
   const [timeLeft,    setTimeLeft]    = useState(0);
   const [copied,      setCopied]      = useState(false);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [revealSecs,  setRevealSecs]  = useState(5);
+  const timerRef       = useRef<ReturnType<typeof setInterval> | null>(null);
+  const revealTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const currentQuestion: Question | null = quiz?.questions[qIdx] ?? null;
 
@@ -60,13 +63,19 @@ export default function RunQuizPage() {
       fetch(`/api/quiz/${params.id}/session`).then((r) => r.json()),
     ]).then(([quizData, sessionData]) => {
       setQuiz(quizData);
-      if (sessionData && sessionData.id) {
+      const reset = searchParams.get("reset") === "1";
+      if (sessionData && sessionData.id && sessionData.status === "FINISHED" && !reset) {
+        // Quiz already finished — redirect to results instead of creating a new session
+        router.replace(`/results/${sessionData.id}`);
+        return;
+      }
+      if (sessionData && sessionData.id && sessionData.status !== "FINISHED") {
         setQuizSession(sessionData);
         setPlayers(sessionData.players?.map((sp: { user: { id: string; name: string }; score: number; id: string }) => ({
           userId: sp.user.id, name: sp.user.name, score: sp.score, sessionPlayerId: sp.id,
         })) ?? []);
       } else {
-        // Create new session
+        // No session or ?reset=1 — create new session
         fetch(`/api/quiz/${params.id}/session`, { method: "POST" })
           .then((r) => r.json())
           .then((s) => setQuizSession(s));
@@ -84,11 +93,9 @@ export default function RunQuizPage() {
       socket.emit("organizer-join", { sessionId });
     };
 
-    if (socket.connected) {
-      joinAsOrganizer();
-    } else {
-      socket.once("connect", joinAsOrganizer);
-    }
+    // Use `on` (not `once`) so that every reconnect re-joins the room.
+    socket.on("connect", joinAsOrganizer);
+    if (socket.connected) joinAsOrganizer();
 
     socket.on("player-joined", (player) => {
       setPlayers((prev) => {
@@ -101,6 +108,7 @@ export default function RunQuizPage() {
     });
     socket.on("quiz-started", () => { setPhase("ACTIVE"); setQIdx(0); });
     socket.on("question-started", ({ questionIndex, endsAt }) => {
+      if (revealTimerRef.current) { clearInterval(revealTimerRef.current); revealTimerRef.current = null; }
       setPhase("ACTIVE");
       setQIdx(questionIndex);
       setVotes({});
@@ -116,21 +124,37 @@ export default function RunQuizPage() {
       timerRef.current = setInterval(tick, 250);
     });
     socket.on("answer-received", ({ votes: v, totalAnswered: t }) => { setVotes(v); setTotalAnswered(t); });
-    socket.on("question-ended", ({ correctAnswerIds, votes: v }) => {
+    socket.on("question-ended", ({ correctAnswerIds, votes: v, questionIndex }) => {
+      if (questionIndex !== undefined) setQIdx(questionIndex);
       setPhase("REVEAL");
       setCorrectIds(correctAnswerIds);
       setVotes(v);
       if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+      // Countdown until auto-advance
+      setRevealSecs(5);
+      if (revealTimerRef.current) clearInterval(revealTimerRef.current);
+      revealTimerRef.current = setInterval(() => {
+        setRevealSecs(prev => {
+          if (prev <= 1) { clearInterval(revealTimerRef.current!); revealTimerRef.current = null; return 0; }
+          return prev - 1;
+        });
+      }, 1000);
     });
     socket.on("score-update", (p) => setPlayers(p));
-    socket.on("quiz-finished", (p) => { setPlayers(p); setPhase("FINISHED"); });
+    socket.on("quiz-finished", (p) => {
+      setPlayers(p);
+      setPhase("FINISHED");
+      if (sessionId) router.push(`/results/${sessionId}`);
+    });
 
     return () => {
+      socket.off("connect", joinAsOrganizer);
       socket.off("player-joined"); socket.off("player-left");
       socket.off("quiz-started"); socket.off("question-started");
       socket.off("answer-received"); socket.off("question-ended");
       socket.off("score-update"); socket.off("quiz-finished");
       if (timerRef.current) clearInterval(timerRef.current);
+      if (revealTimerRef.current) clearInterval(revealTimerRef.current);
       disconnectSocket();
     };
   }, [quizSession?.id]);
@@ -151,6 +175,12 @@ export default function RunQuizPage() {
     getSocket().emit("end-question", { sessionId: quizSession.id });
   }, [quizSession]);
 
+  const endSession = useCallback(async () => {
+    await fetch(`/api/quiz/${params.id}/session`, { method: "DELETE" });
+    disconnectSocket();
+    window.location.href = "/dashboard";
+  }, [params.id]);
+
   const copyCode = useCallback(() => {
     if (!quizSession) return;
     navigator.clipboard.writeText(quizSession.roomCode);
@@ -169,42 +199,42 @@ export default function RunQuizPage() {
 
   if (!quiz || !quizSession) {
     return (
-      <div style={{ minHeight: "100vh", background: "#0F0E17", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <span style={{ color: "#A7A9BE", fontFamily: "Inter, sans-serif" }}>Setting up room…</span>
+      <div style={{ minHeight: "100vh", background: "#19191A", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <span style={{ color: "#909499", fontFamily: "Inter, sans-serif" }}>Настраиваем комнату…</span>
       </div>
     );
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: "#0F0E17", fontFamily: "Inter, sans-serif", color: "#E8E8F0", display: "flex", flexDirection: "column" }}>
+    <div style={{ minHeight: "100vh", background: "#19191A", fontFamily: "Inter, sans-serif", color: "#E7E8EA", display: "flex", flexDirection: "column" }}>
 
       {/* ── Top bar ── */}
       <header style={{
         flexShrink: 0, height: 64,
         display: "flex", alignItems: "center", justifyContent: "space-between",
         padding: "0 32px",
-        borderBottom: "1px solid #2E2E4A",
+        borderBottom: "1px solid #363738",
         position: "relative", zIndex: 5,
       }}>
         {/* Left */}
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <div style={{ width: 28, height: 28, borderRadius: 8, background: "linear-gradient(135deg,#6C63FF,#FF6584)", boxShadow: "0 4px 20px rgba(108,99,255,0.4)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <div style={{ width: 28, height: 28, borderRadius: 8, background: "linear-gradient(180deg,#0077FF,#005CC4)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
             <svg width="16" height="11" viewBox="8 11 20 14" fill="none">
               <path d="M10.5825 18H13.0552L14.7036 13.055L18 22.946L19.649 18H25.418" stroke="white" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </div>
           {(phase === "ACTIVE" || phase === "REVEAL") ? (
             <>
-              <div style={{ display: "inline-flex", alignItems: "center", padding: "4px 10px", borderRadius: 999, background: "rgba(108,99,255,0.15)", border: "1px solid rgba(108,99,255,0.3)", fontSize: 13, fontWeight: 600, color: "#B9B3FF", fontVariantNumeric: "tabular-nums" }}>
-                Q {qIdx + 1} / {quiz.questions.length}
+              <div style={{ display: "inline-flex", alignItems: "center", padding: "4px 10px", borderRadius: 999, background: "rgba(0,119,255,0.15)", border: "1px solid rgba(0,119,255,0.3)", fontSize: 13, fontWeight: 600, color: "#71AAEB", fontVariantNumeric: "tabular-nums" }}>
+                В {qIdx + 1} / {quiz.questions.length}
               </div>
-              <span style={{ fontSize: 14, color: "#A7A9BE" }}>{quiz.title}</span>
+              <span style={{ fontSize: 14, color: "#909499" }}>{quiz.title}</span>
             </>
           ) : (
             <>
-              <div style={{ width: 1, height: 20, background: "#2E2E4A" }} />
-              <span style={{ fontSize: 14, color: "#A7A9BE" }}>
-                Hosting · <span style={{ color: "#E8E8F0", fontWeight: 500 }}>{quiz.title}</span>
+              <div style={{ width: 1, height: 20, background: "#363738" }} />
+              <span style={{ fontSize: 14, color: "#909499" }}>
+                Ведёт · <span style={{ color: "#E7E8EA", fontWeight: 500 }}>{quiz.title}</span>
               </span>
             </>
           )}
@@ -212,26 +242,24 @@ export default function RunQuizPage() {
 
         {/* Right */}
         {phase === "ACTIVE" && (
-          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "#A7A9BE" }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-              <span style={{ fontVariantNumeric: "tabular-nums" }}>{totalAnswered} / {players.length} answered</span>
-            </div>
-            <button onClick={endQuestion} style={{ height: 32, padding: "0 12px", borderRadius: 6, border: "1px solid #3D3D5F", background: "#24243E", color: "#A7A9BE", fontSize: 13, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>End early</button>
-            <button onClick={endQuestion} style={{ display: "flex", alignItems: "center", gap: 6, height: 32, padding: "0 14px", borderRadius: 6, border: "none", background: "linear-gradient(180deg,#6C63FF,#4B44CC)", color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "Inter, sans-serif", boxShadow: "0 4px 12px rgba(108,99,255,0.35)" }}>
-              Skip <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-            </button>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "#909499" }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <span style={{ fontVariantNumeric: "tabular-nums" }}>{totalAnswered} / {players.length} ответили</span>
           </div>
         )}
         {phase === "REVEAL" && (
-          <button onClick={nextQuestion} style={{ display: "flex", alignItems: "center", gap: 6, height: 32, padding: "0 14px", borderRadius: 6, border: "none", background: "linear-gradient(180deg,#6C63FF,#4B44CC)", color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "Inter, sans-serif", boxShadow: "0 4px 12px rgba(108,99,255,0.35)" }}>
-            {qIdx + 1 < quiz.questions.length ? "Next question" : "Finish"}
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#909499" }}>
+            <div style={{ display: "flex", gap: 3 }}>
+              {[1, 0.6, 0.3].map((op, i) => <div key={i} style={{ width: 5, height: 5, borderRadius: "50%", background: "#76787A", opacity: op }} />)}
+            </div>
+            {revealSecs > 0
+              ? `Следующий вопрос через ${revealSecs} сек`
+              : "Переходим к следующему…"}
+          </div>
         )}
         {phase === "WAITING" && (
-          <button onClick={() => window.location.href = "/dashboard"} style={{ height: 32, padding: "0 12px", borderRadius: 6, border: "none", background: "transparent", color: "#A7A9BE", fontSize: 13, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>
-            End session
+          <button onClick={endSession} style={{ height: 32, padding: "0 12px", borderRadius: 6, border: "none", background: "transparent", color: "#909499", fontSize: 13, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>
+            Завершить сессию
           </button>
         )}
       </header>
@@ -248,57 +276,57 @@ export default function RunQuizPage() {
               {/* Dot grid */}
               <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px)", backgroundSize: "24px 24px", pointerEvents: "none", maskImage: "radial-gradient(ellipse at center, black 30%, transparent 80%)", WebkitMaskImage: "radial-gradient(ellipse at center, black 30%, transparent 80%)" }} />
               {/* Glow blobs */}
-              <div style={{ position: "absolute", width: 600, height: 600, borderRadius: "50%", background: "radial-gradient(circle, rgba(108,99,255,0.3) 0%, transparent 60%)", top: "calc(30% - 300px)", left: "calc(30% - 300px)", pointerEvents: "none", filter: "blur(40px)" }} />
-              <div style={{ position: "absolute", width: 500, height: 500, borderRadius: "50%", background: "radial-gradient(circle, rgba(255,101,132,0.2) 0%, transparent 60%)", top: "calc(70% - 250px)", left: "calc(70% - 250px)", pointerEvents: "none", filter: "blur(40px)" }} />
+              <div style={{ position: "absolute", width: 600, height: 600, borderRadius: "50%", background: "radial-gradient(circle, rgba(0,119,255,0.25) 0%, transparent 60%)", top: "calc(30% - 300px)", left: "calc(30% - 300px)", pointerEvents: "none", filter: "blur(40px)" }} />
+              <div style={{ position: "absolute", width: 500, height: 500, borderRadius: "50%", background: "radial-gradient(circle, rgba(75,179,75,0.15) 0%, transparent 60%)", top: "calc(70% - 250px)", left: "calc(70% - 250px)", pointerEvents: "none", filter: "blur(40px)" }} />
 
               <div style={{ position: "relative", zIndex: 1, textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 0 }}>
                 {/* Room live badge */}
-                <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 12px", borderRadius: 999, background: "rgba(67,217,143,0.12)", border: "1px solid rgba(67,217,143,0.3)", marginBottom: 16 }}>
-                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#43D98F", display: "inline-block", boxShadow: "0 0 8px #43D98F" }} />
-                  <span style={{ color: "#43D98F", fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>Room live</span>
+                <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 12px", borderRadius: 999, background: "rgba(75,179,75,0.12)", border: "1px solid rgba(75,179,75,0.3)", marginBottom: 16 }}>
+                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#4BB34B", display: "inline-block", boxShadow: "0 0 8px #4BB34B" }} />
+                  <span style={{ color: "#4BB34B", fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>Комната открыта</span>
                 </div>
 
                 {/* Join at */}
-                <div style={{ fontSize: 22, color: "#A7A9BE", marginBottom: 12 }}>
-                  Join at <span style={{ color: "#E8E8F0", fontWeight: 600 }}>pulse.app/join</span>
+                <div style={{ fontSize: 22, color: "#909499", marginBottom: 12 }}>
+                  Подключайтесь на <span style={{ color: "#E7E8EA", fontWeight: 600 }}>pulse.app/join</span>
                 </div>
 
                 {/* Room code card */}
                 <div style={{
                   display: "inline-flex", gap: 14,
                   padding: "22px 28px",
-                  background: "rgba(26,26,46,0.7)",
-                  border: "1px solid #2E2E4A",
+                  background: "rgba(35,35,36,0.7)",
+                  border: "1px solid #363738",
                   borderRadius: 24,
                   backdropFilter: "blur(20px)",
                   WebkitBackdropFilter: "blur(20px)",
-                  boxShadow: "0 20px 60px rgba(0,0,0,0.5), 0 0 0 4px rgba(108,99,255,0.1)",
+                  boxShadow: "0 20px 60px rgba(0,0,0,0.5), 0 0 0 4px rgba(0,119,255,0.1)",
                   marginBottom: 32,
                 }}>
                   {quizSession.roomCode.split("").map((ch, i) => (
                     <div key={i} style={{
                       width: 88, height: 110,
-                      background: "linear-gradient(180deg,#1A1A2E 0%,#07060F 100%)",
-                      border: "1px solid #3D3D5F",
+                      background: "linear-gradient(180deg,#232324 0%,#19191A 100%)",
+                      border: "1px solid #363738",
                       borderRadius: 14,
                       display: "flex", alignItems: "center", justifyContent: "center",
                       fontFamily: "'JetBrains Mono', monospace",
                       fontSize: 64, fontWeight: 800,
                       letterSpacing: "-0.02em",
-                      color: "#E8E8F0",
+                      color: "#E7E8EA",
                     }}>{ch}</div>
                   ))}
                 </div>
 
                 {/* Action buttons */}
                 <div style={{ display: "flex", gap: 10, justifyContent: "center", marginBottom: 36 }}>
-                  <button onClick={copyCode} style={{ display: "flex", alignItems: "center", gap: 8, height: 40, padding: "0 18px", borderRadius: 8, border: "1px solid #3D3D5F", background: "#24243E", color: "#E8E8F0", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>
+                  <button onClick={copyCode} style={{ display: "flex", alignItems: "center", gap: 8, height: 40, padding: "0 18px", borderRadius: 8, border: "1px solid #363738", background: "#2C2D2E", color: "#E7E8EA", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>
                     <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="4.5" y="4.5" width="8" height="8" rx="1.5" stroke="currentColor" strokeWidth="1.2"/><path d="M9 4.5V3a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1h1.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
-                    {copied ? "Copied!" : "Copy code"}
+                    {copied ? "Скопировано!" : "Скопировать код"}
                   </button>
-                  <button style={{ display: "flex", alignItems: "center", gap: 8, height: 40, padding: "0 18px", borderRadius: 8, border: "1px solid #3D3D5F", background: "#24243E", color: "#E8E8F0", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>
+                  <button style={{ display: "flex", alignItems: "center", gap: 8, height: 40, padding: "0 18px", borderRadius: 8, border: "1px solid #363738", background: "#2C2D2E", color: "#E7E8EA", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="3" height="3"/></svg>
-                    Show QR
+                    Показать QR
                   </button>
                 </div>
 
@@ -311,50 +339,50 @@ export default function RunQuizPage() {
                     minWidth: 280, height: 60,
                     borderRadius: 10, border: "none",
                     background: players.length > 0
-                      ? "linear-gradient(180deg,#6C63FF 0%,#4B44CC 100%)"
-                      : "#24243E",
+                      ? "linear-gradient(180deg,#0077FF 0%,#005CC4 100%)"
+                      : "#2C2D2E",
                     boxShadow: players.length > 0
-                      ? "0 4px 16px rgba(108,99,255,0.35), inset 0 1px 0 rgba(255,255,255,0.2)"
-                      : "inset 0 0 0 1px #3D3D5F",
-                    color: players.length > 0 ? "#fff" : "#6E708A",
+                      ? "0 4px 16px rgba(0,119,255,0.35), inset 0 1px 0 rgba(255,255,255,0.2)"
+                      : "inset 0 0 0 1px #363738",
+                    color: players.length > 0 ? "#fff" : "#76787A",
                     fontSize: 18, fontWeight: 600,
                     cursor: players.length > 0 ? "pointer" : "not-allowed",
                     fontFamily: "Inter, sans-serif",
                   }}
                 >
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                  Start quiz ({players.length} {players.length === 1 ? "player" : "players"})
+                  Начать квиз ({players.length} {players.length === 1 ? "игрок" : players.length <= 4 ? "игрока" : "игроков"})
                 </button>
 
-                <div style={{ display: "flex", alignItems: "center", gap: 6, color: "#6E708A", fontSize: 13, marginTop: 10 }}>
-                  Press{" "}
-                  <kbd style={{ background: "#24243E", padding: "2px 7px", borderRadius: 4, fontSize: 11, border: "1px solid #2E2E4A", fontFamily: "monospace" }}>Space</kbd>
-                  {" "}to start
+                <div style={{ display: "flex", alignItems: "center", gap: 6, color: "#76787A", fontSize: 13, marginTop: 10 }}>
+                  Нажмите{" "}
+                  <kbd style={{ background: "#2C2D2E", padding: "2px 7px", borderRadius: 4, fontSize: 11, border: "1px solid #363738", fontFamily: "monospace" }}>Пробел</kbd>
+                  {" "}для старта
                 </div>
               </div>
             </div>
 
             {/* Right: players list */}
-            <div style={{ borderLeft: "1px solid #2E2E4A", background: "#07060F", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+            <div style={{ borderLeft: "1px solid #363738", background: "#19191A", display: "flex", flexDirection: "column", overflow: "hidden" }}>
               {/* Panel header */}
-              <div style={{ padding: "20px 24px", borderBottom: "1px solid #2E2E4A", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
+              <div style={{ padding: "20px 24px", borderBottom: "1px solid #363738", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
                 <div>
-                  <div style={{ fontSize: 16, fontWeight: 600, color: "#E8E8F0" }}>Players</div>
-                  <div style={{ fontSize: 12, color: "#6E708A", marginTop: 2 }}>
-                    {players.length} joined
-                    {players.length > 0 && <span style={{ color: "#43D98F" }}> · {players.length <= 2 ? players.length : 2} just now</span>}
+                  <div style={{ fontSize: 16, fontWeight: 600, color: "#E7E8EA" }}>Игроки</div>
+                  <div style={{ fontSize: 12, color: "#76787A", marginTop: 2 }}>
+                    {players.length} подключились
+                    {players.length > 0 && <span style={{ color: "#4BB34B" }}> · только что</span>}
                   </div>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#43D98F", boxShadow: "0 0 8px #43D98F" }} />
-                  <span style={{ fontSize: 12, color: "#43D98F", fontWeight: 500 }}>live</span>
+                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#4BB34B", boxShadow: "0 0 8px #4BB34B" }} />
+                  <span style={{ fontSize: 12, color: "#4BB34B", fontWeight: 500 }}>live</span>
                 </div>
               </div>
 
               {/* Player rows */}
               <div style={{ flex: 1, overflowY: "auto", padding: "16px", display: "flex", flexDirection: "column", gap: 6 }}>
                 {players.length === 0 && (
-                  <p style={{ color: "#6E708A", fontSize: 13, margin: 0 }}>Waiting for players…</p>
+                  <p style={{ color: "#76787A", fontSize: 13, margin: 0 }}>Ожидаем игроков…</p>
                 )}
                 {players.map((p, i) => {
                   const isNew = i >= players.length - 2;
@@ -362,8 +390,8 @@ export default function RunQuizPage() {
                     <div key={p.userId} style={{
                       display: "flex", alignItems: "center", gap: 10,
                       padding: "8px 12px", borderRadius: 8,
-                      background: isNew ? "rgba(67,217,143,0.08)" : "#1A1A2E",
-                      border: `1px solid ${isNew ? "rgba(67,217,143,0.3)" : "#2E2E4A"}`,
+                      background: isNew ? "rgba(75,179,75,0.08)" : "#232324",
+                      border: `1px solid ${isNew ? "rgba(75,179,75,0.3)" : "#363738"}`,
                     }}>
                       <div style={{
                         width: 28, height: 28, borderRadius: "50%", flexShrink: 0,
@@ -373,8 +401,8 @@ export default function RunQuizPage() {
                       }}>
                         {initials(p.name)}
                       </div>
-                      <span style={{ flex: 1, fontSize: 14, fontWeight: 500, color: "#E8E8F0" }}>{p.name}</span>
-                      {isNew && <span style={{ fontSize: 11, color: "#43D98F", fontWeight: 600 }}>just joined</span>}
+                      <span style={{ flex: 1, fontSize: 14, fontWeight: 500, color: "#E7E8EA" }}>{p.name}</span>
+                      {isNew && <span style={{ fontSize: 11, color: "#4BB34B", fontWeight: 600 }}>только что</span>}
                     </div>
                   );
                 })}
@@ -389,7 +417,7 @@ export default function RunQuizPage() {
           const correctCount = Object.entries(votes).filter(([id]) => correctIds.includes(id)).reduce((s, [, v]) => s + v, 0);
           const accuracy = totalAnswered > 0 ? Math.round(correctCount / totalAnswered * 100) : 0;
           const pct = currentQuestion.timeLimit > 0 ? (timeLeft / currentQuestion.timeLimit) * 100 : 0;
-          const timerColor = pct > 50 ? "#43D98F" : pct > 20 ? "#FFB547" : "#FF6584";
+          const timerColor = pct > 50 ? "#4BB34B" : pct > 20 ? "#FFA000" : "#E64646";
 
           return (
             <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
@@ -414,13 +442,13 @@ export default function RunQuizPage() {
                   {/* Meta + question text */}
                   <div style={{ flexShrink: 0, marginBottom: 28 }}>
                     {phase === "REVEAL" && (
-                      <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "#43D98F", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 700, marginBottom: 12 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "#4BB34B", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 700, marginBottom: 12 }}>
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                        Correct answer revealed
+                        Правильный ответ раскрыт
                       </div>
                     )}
-                    <div style={{ fontSize: 12, color: "#6E708A", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600, marginBottom: 12 }}>
-                      {currentQuestion.type === "SINGLE" ? "Single choice" : "Multiple choice"} · {currentQuestion.points.toLocaleString()} pts
+                    <div style={{ fontSize: 12, color: "#76787A", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600, marginBottom: 12 }}>
+                      {currentQuestion.type === "SINGLE" ? "Один ответ" : "Несколько ответов"} · {currentQuestion.points.toLocaleString()} очков
                     </div>
                     <div style={{ fontSize: 44, fontWeight: 700, letterSpacing: "-0.02em", lineHeight: 1.15, maxWidth: 800 }}>
                       {currentQuestion.text}
@@ -446,7 +474,7 @@ export default function RunQuizPage() {
                           border: "1px solid rgba(255,255,255,0.08)",
                           background: ANS_GRADIENTS[ai % 4],
                           filter: dimmed ? "grayscale(0.7) brightness(0.45)" : "none",
-                          boxShadow: isReveal && isCorrect ? "0 0 0 3px #43D98F, 0 0 40px rgba(67,217,143,0.5)" : "none",
+                          boxShadow: isReveal && isCorrect ? "0 0 0 3px #4BB34B, 0 0 40px rgba(75,179,75,0.5)" : "none",
                           transition: "filter 0.3s, box-shadow 0.3s",
                         }}>
                           {/* Letter chip */}
@@ -460,7 +488,7 @@ export default function RunQuizPage() {
                             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                               {isReveal && isCorrect && (
                                 <div style={{ width: 24, height: 24, borderRadius: "50%", background: "white", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#43D98F" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4BB34B" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                                 </div>
                               )}
                               <span style={{ fontSize: 28, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{voteCount}</span>
@@ -477,18 +505,18 @@ export default function RunQuizPage() {
                 </div>
 
                 {/* Right: live standings card */}
-                <div style={{ background: "#1A1A2E", border: "1px solid #2E2E4A", borderRadius: 16, boxShadow: "0 1px 0 rgba(255,255,255,0.04) inset, 0 8px 24px rgba(0,0,0,0.3)", padding: 20, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+                <div style={{ background: "#232324", border: "1px solid #363738", borderRadius: 16, boxShadow: "0 1px 0 rgba(255,255,255,0.04) inset, 0 8px 24px rgba(0,0,0,0.3)", padding: 20, display: "flex", flexDirection: "column", overflow: "hidden" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexShrink: 0 }}>
-                    <div style={{ fontSize: 14, fontWeight: 600 }}>Live standings</div>
-                    <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 10px", borderRadius: 999, background: "rgba(67,217,143,0.12)", border: "1px solid rgba(67,217,143,0.3)", fontSize: 12, fontWeight: 600, color: "#43D98F" }}>
-                      <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#43D98F", display: "inline-block" }} />
+                    <div style={{ fontSize: 14, fontWeight: 600 }}>Турнирная таблица</div>
+                    <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 10px", borderRadius: 999, background: "rgba(75,179,75,0.12)", border: "1px solid rgba(75,179,75,0.3)", fontSize: 12, fontWeight: 600, color: "#4BB34B" }}>
+                      <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#4BB34B", display: "inline-block" }} />
                       live
                     </div>
                   </div>
                   <div style={{ flex: 1, overflowY: "auto" }}>
                     {players.slice(0, 10).map((p, i) => (
-                      <div key={p.userId} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: "1px solid #2E2E4A" }}>
-                        <span style={{ width: 22, fontSize: 13, fontWeight: 700, color: i < 3 ? "#FFB547" : "#6E708A", fontVariantNumeric: "tabular-nums" }}>{i + 1}</span>
+                      <div key={p.userId} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: "1px solid #363738" }}>
+                        <span style={{ width: 22, fontSize: 13, fontWeight: 700, color: i < 3 ? "#FFA000" : "#76787A", fontVariantNumeric: "tabular-nums" }}>{i + 1}</span>
                         <div style={{ width: 28, height: 28, borderRadius: "50%", background: avatarColor(p.name), display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "#fff", flexShrink: 0 }}>
                           {initials(p.name)}
                         </div>
@@ -496,9 +524,9 @@ export default function RunQuizPage() {
                         <span style={{ fontSize: 13, fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{p.score.toLocaleString()}</span>
                       </div>
                     ))}
-                    {players.length === 0 && <p style={{ color: "#6E708A", fontSize: 13 }}>No players yet</p>}
+                    {players.length === 0 && <p style={{ color: "#76787A", fontSize: 13 }}>Игроков пока нет</p>}
                   </div>
-                  <div style={{ paddingTop: 12, fontSize: 12, color: "#6E708A", textAlign: "center", flexShrink: 0 }}>Updates after every question</div>
+                  <div style={{ paddingTop: 12, fontSize: 12, color: "#76787A", textAlign: "center", flexShrink: 0 }}>Обновляется после каждого вопроса</div>
                 </div>
 
               </div>
@@ -506,25 +534,10 @@ export default function RunQuizPage() {
           );
         })()}
 
-        {/* ══ FINISHED ══ */}
+        {/* FINISHED: redirecting to /results/[sessionId] */}
         {phase === "FINISHED" && (
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 40, gap: 24 }}>
-            <div style={{ fontSize: 32, fontWeight: 800 }}>Quiz finished! 🎉</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8, width: "100%", maxWidth: 400 }}>
-              {players.slice(0, 10).map((p, i) => (
-                <div key={p.userId} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderRadius: 10, background: "#1A1A2E", border: `1px solid ${i === 0 ? "rgba(255,181,71,0.4)" : "#2E2E4A"}` }}>
-                  <span style={{ width: 24, fontSize: 14, fontWeight: 700, color: i < 3 ? "#FFB547" : "#6E708A" }}>#{i + 1}</span>
-                  <div style={{ width: 32, height: 32, borderRadius: "50%", background: avatarColor(p.name), display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, color: "#fff", flexShrink: 0 }}>
-                    {initials(p.name)}
-                  </div>
-                  <span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: "#E8E8F0" }}>{p.name}</span>
-                  <span style={{ fontSize: 15, fontWeight: 800, color: i === 0 ? "#FFB547" : "#E8E8F0" }}>{p.score.toLocaleString()}</span>
-                </div>
-              ))}
-            </div>
-            <Link href="/dashboard" style={{ padding: "12px 32px", borderRadius: 10, background: "linear-gradient(180deg,#6C63FF,#4B44CC)", color: "#fff", fontWeight: 700, fontSize: 15, textDecoration: "none" }}>
-              Back to Dashboard
-            </Link>
+          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <p style={{ color: "#909499", fontFamily: "Inter, sans-serif" }}>Переходим к результатам…</p>
           </div>
         )}
 

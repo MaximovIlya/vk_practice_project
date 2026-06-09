@@ -25,7 +25,7 @@ export default function SelectRolePage() {
     });
 
     if (!res.ok) {
-      setError("Something went wrong. Please try again.");
+      setError("Что-то пошло не так. Попробуйте снова.");
       setLoading(false);
       return;
     }
@@ -35,7 +35,7 @@ export default function SelectRolePage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-8" style={{ background: "#07060F" }}>
+    <div className="min-h-screen flex items-center justify-center p-8" style={{ background: "#19191A" }}>
       <div className="w-full max-w-sm space-y-8">
         <div className="flex items-center gap-1">
           <svg width="52" height="52" viewBox="0 0 76 76" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginTop: "6px" }}>
@@ -50,23 +50,23 @@ export default function SelectRolePage() {
                 <feOffset dy="4" />
                 <feGaussianBlur stdDeviation="10" />
                 <feComposite in2="hardAlpha" operator="out" />
-                <feColorMatrix type="matrix" values="0 0 0 0 0.423529 0 0 0 0 0.388235 0 0 0 0 1 0 0 0 0.4 0" />
+                <feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0.467 0 0 0 0 1 0 0 0 0.4 0" />
                 <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow" />
                 <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow" result="shape" />
               </filter>
               <linearGradient id="b_sr" x1="20" y1="16" x2="56" y2="52" gradientUnits="userSpaceOnUse">
-                <stop stopColor="#6C63FF" />
-                <stop offset="1" stopColor="#FF6584" />
+                <stop stopColor="#0077FF" />
+                <stop offset="1" stopColor="#005CC4" />
               </linearGradient>
             </defs>
           </svg>
-          <span className="text-xl font-extrabold" style={{ color: "#FFFFFE" }}>Pulse</span>
+          <span className="text-xl font-extrabold" style={{ color: "#E7E8EA" }}>Pulse</span>
         </div>
 
         <div>
-          <h2 className="text-2xl font-bold" style={{ color: "#FFFFFE" }}>One last step</h2>
-          <p className="text-sm mt-1" style={{ color: "#6E708A" }}>
-            How are you planning to use Pulse?
+          <h2 className="text-2xl font-bold" style={{ color: "#E7E8EA" }}>Последний шаг</h2>
+          <p className="text-sm mt-1" style={{ color: "#76787A" }}>
+            Как вы планируете использовать Pulse?
           </p>
         </div>
 
@@ -81,22 +81,22 @@ export default function SelectRolePage() {
                   onClick={() => setRole(r)}
                   className="flex flex-col items-start gap-1 p-4 rounded-[10px] text-left transition-all"
                   style={{
-                    background: selected ? "rgba(75,68,204,0.15)" : "#1A1A2E",
-                    border: `1px solid ${selected ? "#4B44CC" : "#3D3D5F"}`,
+                    background: selected ? "rgba(0,119,255,0.12)" : "#232324",
+                    border: `1px solid ${selected ? "#0077FF" : "#363738"}`,
                   }}
                 >
                   <div className="flex items-center justify-between w-full">
-                    <span className="text-sm font-semibold" style={{ color: "#FFFFFE" }}>
-                      {r === "ORGANIZER" ? "Organizer" : "Participant"}
+                    <span className="text-sm font-semibold" style={{ color: "#E7E8EA" }}>
+                      {r === "ORGANIZER" ? "Организатор" : "Участник"}
                     </span>
                     {selected && (
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4B44CC" strokeWidth="2.5">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0077FF" strokeWidth="2.5">
                         <polyline points="20 6 9 17 4 12" />
                       </svg>
                     )}
                   </div>
-                  <span className="text-xs" style={{ color: "#6E708A" }}>
-                    {r === "ORGANIZER" ? "Host quizzes & rooms" : "Join with a room code"}
+                  <span className="text-xs" style={{ color: "#76787A" }}>
+                    {r === "ORGANIZER" ? "Веду квизы и комнаты" : "Вхожу по коду комнаты"}
                   </span>
                 </button>
               );
@@ -104,7 +104,7 @@ export default function SelectRolePage() {
           </div>
 
           {error && (
-            <p className="text-xs" style={{ color: "#FF6584" }}>{error}</p>
+            <p className="text-xs" style={{ color: "#E64646" }}>{error}</p>
           )}
 
           <button
@@ -112,11 +112,11 @@ export default function SelectRolePage() {
             disabled={loading}
             className="w-full py-2.5 rounded-[10px] text-sm font-semibold text-white transition-opacity disabled:opacity-60"
             style={{
-              background: "linear-gradient(135deg, #FFB547 0%, #FFB547 100%)",
-              boxShadow: "0px 8px 24px rgba(255,181,71,0.33)",
+              background: "linear-gradient(180deg, #0077FF 0%, #005CC4 100%)",
+              boxShadow: "0px 8px 24px rgba(0,119,255,0.33)",
             }}
           >
-            {loading ? "Saving…" : "Continue"}
+            {loading ? "Сохранение…" : "Продолжить"}
           </button>
         </form>
       </div>

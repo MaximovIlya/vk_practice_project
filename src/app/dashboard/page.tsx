@@ -55,6 +55,15 @@ export default async function DashboardPage() {
       _avg: { score: true },
     });
 
+    const activeSession = await prisma.quizSession.findFirst({
+      where: {
+        quiz: { authorId: session.user.id },
+        status: { in: ["ACTIVE", "WAITING"] },
+      },
+      include: { quiz: { select: { id: true, title: true } } },
+      orderBy: { startedAt: "desc" },
+    });
+
     return (
       <OrganizerDashboard
         user={user}
@@ -65,9 +74,28 @@ export default async function DashboardPage() {
           activeRooms,
         }}
         quizzes={quizzesData}
+        activeSession={activeSession ? {
+          sessionId: activeSession.id,
+          quizId: activeSession.quiz.id,
+          quizTitle: activeSession.quiz.title,
+          status: activeSession.status,
+        } : null}
       />
     );
   }
+
+  // Participant — check active session
+  const activeParticipation = await prisma.sessionPlayer.findFirst({
+    where: {
+      userId: session.user.id,
+      session: { status: { in: ["ACTIVE", "WAITING"] } },
+    },
+    include: {
+      session: {
+        include: { quiz: { select: { title: true } } },
+      },
+    },
+  });
 
   // Participant
   const sessionPlayers = await prisma.sessionPlayer.findMany({
@@ -96,5 +124,15 @@ export default async function DashboardPage() {
     };
   });
 
-  return <ParticipantDashboard user={user} history={history} />;
+  return (
+    <ParticipantDashboard
+      user={user}
+      history={history}
+      activeSession={activeParticipation ? {
+        roomCode: activeParticipation.session.roomCode,
+        quizTitle: activeParticipation.session.quiz.title,
+        status: activeParticipation.session.status,
+      } : null}
+    />
+  );
 }

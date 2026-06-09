@@ -17,7 +17,7 @@ function ResetPasswordForm() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!token) {
-      setError("Invalid or missing reset token.");
+      setError("Недействительная или отсутствующая ссылка.");
       return;
     }
     setError("");
@@ -32,7 +32,7 @@ function ResetPasswordForm() {
     setLoading(false);
     if (!res.ok) {
       const data = await res.json();
-      setError(data.error ?? "Something went wrong");
+      setError(data.error ?? "Что-то пошло не так");
     } else {
       router.push("/login?reset=1");
     }
@@ -41,11 +41,11 @@ function ResetPasswordForm() {
   if (!token) {
     return (
       <div className="space-y-4">
-        <p className="text-sm" style={{ color: "#FF6584" }}>
-          Invalid or missing reset token. Please request a new link.
+        <p className="text-sm" style={{ color: "#E64646" }}>
+          Недействительная или отсутствующая ссылка. Запросите новую.
         </p>
-        <Link href="/forgot-password" className="text-sm font-semibold" style={{ color: "#4B44CC" }}>
-          Request new link
+        <Link href="/forgot-password" className="text-sm font-semibold" style={{ color: "#0077FF" }}>
+          Запросить новую ссылку
         </Link>
       </div>
     );
@@ -54,41 +54,41 @@ function ResetPasswordForm() {
   return (
     <>
       <div>
-        <h2 className="text-2xl font-bold" style={{ color: "#FFFFFE" }}>
-          Set new password
+        <h2 className="text-2xl font-bold" style={{ color: "#E7E8EA" }}>
+          Новый пароль
         </h2>
-        <p className="text-sm mt-1" style={{ color: "#6E708A" }}>
-          Choose a strong password for your account.
+        <p className="text-sm mt-1" style={{ color: "#76787A" }}>
+          Придумайте надёжный пароль для вашего аккаунта.
         </p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-1.5">
-          <label className="text-xs font-semibold" style={{ color: "#A7A9BE" }}>
-            New password
+          <label className="text-xs font-semibold" style={{ color: "#909499" }}>
+            Новый пароль
           </label>
           <div className="relative">
             <input
               type={showPassword ? "text" : "password"}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="at least 8 characters"
+              placeholder="не менее 8 символов"
               required
               minLength={8}
               className="w-full px-3 py-2.5 pr-10 rounded-lg text-sm outline-none transition-colors"
               style={{
-                background: "#1A1A2E",
-                border: "1px solid #3D3D5F",
-                color: "#FFFFFE",
+                background: "#232324",
+                border: "1px solid #363738",
+                color: "#E7E8EA",
               }}
-              onFocus={(e) => (e.currentTarget.style.borderColor = "#4B44CC")}
-              onBlur={(e) => (e.currentTarget.style.borderColor = "#3D3D5F")}
+              onFocus={(e) => (e.currentTarget.style.borderColor = "#0077FF")}
+              onBlur={(e) => (e.currentTarget.style.borderColor = "#363738")}
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
               className="absolute right-3 top-1/2 -translate-y-1/2"
-              style={{ color: "#6E708A" }}
+              style={{ color: "#76787A" }}
             >
               {showPassword ? (
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -107,7 +107,7 @@ function ResetPasswordForm() {
         </div>
 
         {error && (
-          <p className="text-xs" style={{ color: "#FF6584" }}>
+          <p className="text-xs" style={{ color: "#E64646" }}>
             {error}
           </p>
         )}
@@ -117,11 +117,11 @@ function ResetPasswordForm() {
           disabled={loading}
           className="w-full py-2.5 rounded-[10px] text-sm font-semibold text-white transition-opacity disabled:opacity-60"
           style={{
-            background: "linear-gradient(135deg, #FFB547 0%, #FFB547 100%)",
-            boxShadow: "0px 8px 24px rgba(255,181,71,0.33)",
+            background: "linear-gradient(180deg, #0077FF 0%, #005CC4 100%)",
+            boxShadow: "0px 8px 24px rgba(0,119,255,0.33)",
           }}
         >
-          {loading ? "Saving…" : "Set new password"}
+          {loading ? "Сохранение…" : "Установить новый пароль"}
         </button>
       </form>
     </>
@@ -130,7 +130,7 @@ function ResetPasswordForm() {
 
 export default function ResetPasswordPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center p-8" style={{ background: "#07060F" }}>
+    <div className="min-h-screen flex items-center justify-center p-8" style={{ background: "#19191A" }}>
       <div className="w-full max-w-sm space-y-6">
         {/* Logo */}
         <Link href="/login" className="flex items-center gap-1">
@@ -146,22 +146,40 @@ export default function ResetPasswordPage() {
                 <feOffset dy="4" />
                 <feGaussianBlur stdDeviation="10" />
                 <feComposite in2="hardAlpha" operator="out" />
-                <feColorMatrix type="matrix" values="0 0 0 0 0.423529 0 0 0 0 0.388235 0 0 0 0 1 0 0 0 0.4 0" />
+                <feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0.467 0 0 0 0 1 0 0 0 0.4 0" />
                 <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow" />
                 <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow" result="shape" />
               </filter>
               <linearGradient id="b_rp" x1="20" y1="16" x2="56" y2="52" gradientUnits="userSpaceOnUse">
-                <stop stopColor="#6C63FF" />
-                <stop offset="1" stopColor="#FF6584" />
+                <stop stopColor="#0077FF" />
+                <stop offset="1" stopColor="#005CC4" />
               </linearGradient>
             </defs>
           </svg>
-          <span className="text-xl font-extrabold" style={{ color: "#FFFFFE" }}>Pulse</span>
+          <span className="text-xl font-extrabold" style={{ color: "#E7E8EA" }}>Pulse</span>
         </Link>
+
+        <div>
+          <div className="inline-flex">
+            <span
+              className="text-xs font-semibold px-3 py-1 rounded-full"
+              style={{ background: "rgba(0,119,255,0.12)", color: "#909499" }}
+            >
+              Сброс пароля
+            </span>
+          </div>
+        </div>
 
         <Suspense fallback={null}>
           <ResetPasswordForm />
         </Suspense>
+
+        <p className="text-center text-sm" style={{ color: "#76787A" }}>
+          Вспомнили пароль?{" "}
+          <Link href="/login" className="font-semibold" style={{ color: "#0077FF" }}>
+            Войти
+          </Link>
+        </p>
       </div>
     </div>
   );

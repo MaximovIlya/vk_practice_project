@@ -25,7 +25,7 @@ type Quiz = {
   questions: Question[];
 };
 
-const ANS_BG = ["#4DC4FF", "#FFB547", "#43D98F", "#FC6C85"];
+const ANS_BG = ["#4DC4FF", "#FFA000", "#4BB34B", "#E64646"];
 
 export default function EditQuestionsPage() {
   const router = useRouter();
@@ -46,7 +46,6 @@ export default function EditQuestionsPage() {
       .then((data) => { setQuiz(data); setLoading(false); });
   }, [params.id]);
 
-  // tick saved-seconds counter
   useEffect(() => {
     tickRef.current = setInterval(() => setSavedSec((s) => (s === null ? null : s + 1)), 1000);
     return () => { if (tickRef.current) clearInterval(tickRef.current); };
@@ -117,40 +116,40 @@ export default function EditQuestionsPage() {
   }
 
   function savedLabel() {
-    if (saving) return "Saving…";
-    if (savedSec === null) return "All changes saved";
-    if (savedSec < 5) return "Just saved";
-    if (savedSec < 60) return `Auto-saved · ${savedSec} s ago`;
-    return `Auto-saved · ${Math.round(savedSec / 60)} min ago`;
+    if (saving) return "Сохранение…";
+    if (savedSec === null) return "Все изменения сохранены";
+    if (savedSec < 5) return "Только что сохранено";
+    if (savedSec < 60) return `Автосохранение · ${savedSec} с назад`;
+    return `Автосохранение · ${Math.round(savedSec / 60)} мин назад`;
   }
 
   if (loading) {
     return (
-      <div style={{ minHeight: "100vh", background: "#0F0E17", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <span style={{ color: "#A7A9BE", fontFamily: "Inter, sans-serif", fontSize: 15 }}>Loading…</span>
+      <div style={{ minHeight: "100vh", background: "#19191A", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <span style={{ color: "#909499", fontFamily: "Inter, sans-serif", fontSize: 15 }}>Загружаем…</span>
       </div>
     );
   }
 
   if (!quiz) {
     return (
-      <div style={{ minHeight: "100vh", background: "#0F0E17", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <span style={{ color: "#FF6584", fontFamily: "Inter, sans-serif", fontSize: 15 }}>Quiz not found.</span>
+      <div style={{ minHeight: "100vh", background: "#19191A", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <span style={{ color: "#E64646", fontFamily: "Inter, sans-serif", fontSize: 15 }}>Квиз не найден.</span>
       </div>
     );
   }
 
   return (
-    <div style={{ minHeight: "100vh", height: "100vh", background: "#0F0E17", fontFamily: "Inter, sans-serif", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+    <div style={{ minHeight: "100vh", height: "100vh", background: "#19191A", fontFamily: "Inter, sans-serif", display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
       {/* ── Top bar ── */}
       <header style={{
         flexShrink: 0, height: 56,
         display: "flex", alignItems: "center",
         padding: "0 20px",
-        background: "rgba(15,14,23,0.9)",
+        background: "rgba(25,25,26,0.9)",
         backdropFilter: "blur(12px)",
-        borderBottom: "1px solid #2E2E4A",
+        borderBottom: "1px solid #363738",
         position: "relative",
       }}>
         {/* Left: back button + quiz title */}
@@ -159,25 +158,25 @@ export default function EditQuestionsPage() {
             href="/dashboard"
             style={{
               flexShrink: 0, display: "flex", alignItems: "center", gap: 5,
-              color: "#A7A9BE", fontSize: 13, textDecoration: "none",
+              color: "#909499", fontSize: 13, textDecoration: "none",
               padding: "5px 8px", borderRadius: 7,
               border: "1px solid transparent",
             }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#2E2E4A"; (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.04)"; }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#363738"; (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.04)"; }}
             onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "transparent"; (e.currentTarget as HTMLElement).style.background = "transparent"; }}
           >
             <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
               <path d="M7 2L3.5 5.5 7 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-            Dashboard
+            Главная
           </Link>
-          <span style={{ color: "#2E2E4A", fontSize: 16, lineHeight: 1 }}>·</span>
+          <span style={{ color: "#363738", fontSize: 16, lineHeight: 1 }}>·</span>
           <input
             value={quiz.title}
             onChange={(e) => setQuiz({ ...quiz, title: e.target.value })}
             style={{
               background: "transparent", border: "none", outline: "none",
-              color: "#E8E8F0", fontSize: 14, fontWeight: 600,
+              color: "#E7E8EA", fontSize: 14, fontWeight: 600,
               fontFamily: "Inter, sans-serif", minWidth: 0, flex: 1, maxWidth: 280,
             }}
             onBlur={() => {
@@ -192,10 +191,10 @@ export default function EditQuestionsPage() {
 
         {/* Center: auto-save */}
         <div style={{ position: "absolute", left: "50%", transform: "translateX(-50%)" }}>
-          <span style={{ display: "flex", alignItems: "center", gap: 5, color: "#6E708A", fontSize: 12 }}>
+          <span style={{ display: "flex", alignItems: "center", gap: 5, color: "#76787A", fontSize: 12 }}>
             <span style={{
               width: 5, height: 5, borderRadius: "50%",
-              background: saving ? "#FFB547" : (savedSec !== null ? "#43D98F" : "#6E708A"),
+              background: saving ? "#FFA000" : (savedSec !== null ? "#4BB34B" : "#76787A"),
               display: "inline-block",
             }} />
             {savedLabel()}
@@ -207,28 +206,31 @@ export default function EditQuestionsPage() {
           <button style={{
             display: "flex", alignItems: "center", gap: 6,
             padding: "7px 14px", borderRadius: 8,
-            border: "1px solid #2E2E4A", background: "transparent",
-            color: "#A7A9BE", fontSize: 13, cursor: "pointer",
+            border: "1px solid #363738", background: "transparent",
+            color: "#909499", fontSize: 13, cursor: "pointer",
+            fontFamily: "Inter, sans-serif",
           }}>
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
               <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.4" />
               <circle cx="7" cy="7" r="2" stroke="currentColor" strokeWidth="1.4" />
             </svg>
-            Preview
+            Предпросмотр
           </button>
           <button
             onClick={() => router.push(`/quiz/${quiz.id}/run`)}
             style={{
               display: "flex", alignItems: "center", gap: 6,
               padding: "7px 16px", borderRadius: 8, border: "none",
-              background: "linear-gradient(180deg, #6C63FF 0%, #4B44CC 100%)",
+              background: "linear-gradient(180deg, #0077FF 0%, #005CC4 100%)",
               color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer",
+              fontFamily: "Inter, sans-serif",
+              boxShadow: "0 4px 12px rgba(0,119,255,0.35)",
             }}
           >
             <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
               <path d="M3 2l8 4.5L3 11V2z" fill="currentColor" />
             </svg>
-            Run quiz
+            Запустить квиз
           </button>
         </div>
       </header>
@@ -239,31 +241,31 @@ export default function EditQuestionsPage() {
         {/* ── Left: question list (260px) ── */}
         <aside style={{
           width: 260, flexShrink: 0,
-          background: "#0D0C1A",
-          borderRight: "1px solid #2E2E4A",
+          background: "#19191A",
+          borderRight: "1px solid #363738",
           display: "flex", flexDirection: "column",
           overflow: "hidden",
         }}>
           {/* Sidebar header */}
           <div style={{
             padding: "14px 14px 10px",
-            borderBottom: "1px solid #2E2E4A",
+            borderBottom: "1px solid #363738",
             display: "flex", alignItems: "center", justifyContent: "space-between",
           }}>
-            <span style={{ color: "#E8E8F0", fontWeight: 600, fontSize: 13 }}>
-              Questions{" "}
-              <span style={{ color: "#6E708A", fontWeight: 400 }}>· {quiz.questions.length}</span>
+            <span style={{ color: "#E7E8EA", fontWeight: 600, fontSize: 13 }}>
+              Вопросы{" "}
+              <span style={{ color: "#76787A", fontWeight: 400 }}>· {quiz.questions.length}</span>
             </span>
             <button
               onClick={addQuestion}
               style={{
-                width: 26, height: 26, borderRadius: 6, border: "1px solid #2E2E4A",
-                background: "rgba(108,99,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center",
+                width: 26, height: 26, borderRadius: 6, border: "1px solid #363738",
+                background: "rgba(0,119,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center",
                 cursor: "pointer",
               }}
             >
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                <path d="M6 1v10M1 6h10" stroke="#6C63FF" strokeWidth="1.8" strokeLinecap="round" />
+                <path d="M6 1v10M1 6h10" stroke="#0077FF" strokeWidth="1.8" strokeLinecap="round" />
               </svg>
             </button>
           </div>
@@ -277,44 +279,44 @@ export default function EditQuestionsPage() {
                 style={{
                   width: "100%", display: "flex", alignItems: "center", gap: 8,
                   padding: "10px 10px", borderRadius: 8, marginBottom: 2,
-                  background: i === selectedIdx ? "rgba(108,99,255,0.12)" : "transparent",
-                  border: `1px solid ${i === selectedIdx ? "rgba(108,99,255,0.45)" : "transparent"}`,
+                  background: i === selectedIdx ? "rgba(0,119,255,0.1)" : "transparent",
+                  border: `1px solid ${i === selectedIdx ? "rgba(0,119,255,0.4)" : "transparent"}`,
                   cursor: "pointer", textAlign: "left",
                 }}
               >
                 {/* Drag handle */}
                 <svg width="12" height="14" viewBox="0 0 12 14" fill="none" style={{ flexShrink: 0, opacity: 0.3 }}>
-                  <circle cx="3" cy="2.5" r="1.2" fill="#A7A9BE" />
-                  <circle cx="3" cy="7" r="1.2" fill="#A7A9BE" />
-                  <circle cx="3" cy="11.5" r="1.2" fill="#A7A9BE" />
-                  <circle cx="9" cy="2.5" r="1.2" fill="#A7A9BE" />
-                  <circle cx="9" cy="7" r="1.2" fill="#A7A9BE" />
-                  <circle cx="9" cy="11.5" r="1.2" fill="#A7A9BE" />
+                  <circle cx="3" cy="2.5" r="1.2" fill="#909499" />
+                  <circle cx="3" cy="7" r="1.2" fill="#909499" />
+                  <circle cx="3" cy="11.5" r="1.2" fill="#909499" />
+                  <circle cx="9" cy="2.5" r="1.2" fill="#909499" />
+                  <circle cx="9" cy="7" r="1.2" fill="#909499" />
+                  <circle cx="9" cy="11.5" r="1.2" fill="#909499" />
                 </svg>
 
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 2 }}>
                     <span style={{
-                      fontSize: 10, fontWeight: 700, color: i === selectedIdx ? "#6C63FF" : "#6E708A",
+                      fontSize: 10, fontWeight: 700, color: i === selectedIdx ? "#71AAEB" : "#76787A",
                     }}>
-                      <span style={{ opacity: 0.6 }}>Q</span>{i + 1}
+                      <span style={{ opacity: 0.6 }}>В</span>{i + 1}
                     </span>
                     <span style={{
-                      fontSize: 9, fontWeight: 600, color: "#6E708A",
+                      fontSize: 9, fontWeight: 600, color: "#76787A",
                       textTransform: "uppercase", letterSpacing: "0.06em",
-                    }}>{q.type}</span>
+                    }}>{q.type === "SINGLE" ? "один" : "несколько"}</span>
                     {q.answers.length === 0 && (
                       <span style={{
-                        fontSize: 9, fontWeight: 600, color: "#FFB547",
-                        background: "rgba(255,181,71,0.1)", borderRadius: 3, padding: "1px 4px",
-                      }}>● draft</span>
+                        fontSize: 9, fontWeight: 600, color: "#FFA000",
+                        background: "rgba(255,160,0,0.1)", borderRadius: 3, padding: "1px 4px",
+                      }}>● черновик</span>
                     )}
                   </div>
                   <div style={{
-                    fontSize: 12, color: i === selectedIdx ? "#E8E8F0" : "#A7A9BE",
+                    fontSize: 12, color: i === selectedIdx ? "#E7E8EA" : "#909499",
                     overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                   }}>
-                    {q.text || <span style={{ color: "#6E708A", fontStyle: "italic" }}>Empty question…</span>}
+                    {q.text || <span style={{ color: "#76787A", fontStyle: "italic" }}>Пустой вопрос…</span>}
                   </div>
                 </div>
               </button>
@@ -322,43 +324,44 @@ export default function EditQuestionsPage() {
           </div>
 
           {/* Add question — bottom */}
-          <div style={{ padding: "10px 8px", borderTop: "1px solid #2E2E4A" }}>
+          <div style={{ padding: "10px 8px", borderTop: "1px solid #363738" }}>
             <button
               onClick={addQuestion}
               style={{
                 width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
                 padding: "9px", borderRadius: 8,
-                border: "1px dashed rgba(108,99,255,0.35)",
-                background: "transparent", color: "#6C63FF",
+                border: "1px dashed rgba(0,119,255,0.35)",
+                background: "transparent", color: "#0077FF",
                 fontSize: 13, fontWeight: 500, cursor: "pointer",
+                fontFamily: "Inter, sans-serif",
               }}
             >
               <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
                 <path d="M6.5 1v11M1 6.5h11" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
               </svg>
-              Add question
+              Добавить вопрос
             </button>
           </div>
         </aside>
 
         {/* ── Center: editor ── */}
-        <main style={{ flex: 1, overflowY: "auto", padding: "28px 32px", background: "#0F0E17" }}>
+        <main style={{ flex: 1, overflowY: "auto", padding: "28px 32px", background: "#19191A" }}>
           {!selectedQuestion ? (
-            <div style={{ textAlign: "center", color: "#6E708A", fontSize: 14, marginTop: 80 }}>
-              Select or add a question to edit.
+            <div style={{ textAlign: "center", color: "#76787A", fontSize: 14, marginTop: 80 }}>
+              Выберите или добавьте вопрос для редактирования.
             </div>
           ) : (
             <div style={{ maxWidth: 640 }}>
               {/* Editor header */}
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                  <span style={{ color: "#6E708A", fontSize: 13 }}>
-                    Question {selectedIdx + 1} of {quiz.questions.length}
+                  <span style={{ color: "#76787A", fontSize: 13 }}>
+                    Вопрос {selectedIdx + 1} из {quiz.questions.length}
                   </span>
                   {/* Type toggle */}
                   <div style={{
-                    display: "flex", background: "#1A1A2E", borderRadius: 7,
-                    border: "1px solid #2E2E4A", padding: 3,
+                    display: "flex", background: "#232324", borderRadius: 7,
+                    border: "1px solid #363738", padding: 3,
                   }}>
                     {(["SINGLE", "MULTIPLE"] as const).map((t) => (
                       <button
@@ -367,11 +370,12 @@ export default function EditQuestionsPage() {
                         style={{
                           padding: "5px 12px", borderRadius: 5, border: "none", cursor: "pointer",
                           fontSize: 12, fontWeight: 600,
-                          background: selectedQuestion.type === t ? "rgba(108,99,255,0.22)" : "transparent",
-                          color: selectedQuestion.type === t ? "#6C63FF" : "#6E708A",
+                          background: selectedQuestion.type === t ? "rgba(0,119,255,0.18)" : "transparent",
+                          color: selectedQuestion.type === t ? "#71AAEB" : "#76787A",
+                          fontFamily: "Inter, sans-serif",
                         }}
                       >
-                        {t === "SINGLE" ? "Single choice" : "Multiple"}
+                        {t === "SINGLE" ? "Один ответ" : "Несколько"}
                       </button>
                     ))}
                   </div>
@@ -382,61 +386,62 @@ export default function EditQuestionsPage() {
                   style={{
                     display: "flex", alignItems: "center", gap: 6,
                     padding: "6px 12px", borderRadius: 7,
-                    border: "1px solid rgba(255,101,132,0.25)",
-                    background: "rgba(255,101,132,0.07)",
-                    color: "#FF6584", fontSize: 12, fontWeight: 600, cursor: "pointer",
+                    border: "1px solid rgba(230,70,70,0.25)",
+                    background: "rgba(230,70,70,0.07)",
+                    color: "#E64646", fontSize: 12, fontWeight: 600, cursor: "pointer",
+                    fontFamily: "Inter, sans-serif",
                   }}
                 >
                   <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                     <path d="M1.75 3.50016H12.25M4.66667 3.50016V2.3335H9.33333V3.50016M4.08333 3.50016V11.6668H9.91667V3.50016M5.83333 6.41683V9.91683M8.16667 6.41683V9.91683" stroke="currentColor" strokeWidth="1.16667" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
-                  Delete
+                  Удалить
                 </button>
               </div>
 
               {/* Question text */}
               <div style={{ marginBottom: 20 }}>
-                <label style={{ display: "block", color: "#A7A9BE", fontSize: 12, fontWeight: 600, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                  Question text
+                <label style={{ display: "block", color: "#909499", fontSize: 12, fontWeight: 600, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                  Текст вопроса
                 </label>
                 <textarea
                   value={selectedQuestion.text}
                   onChange={(e) => updateQuestion({ text: e.target.value })}
-                  placeholder="Type your question here…"
+                  placeholder="Напишите вопрос здесь…"
                   rows={3}
                   style={{
-                    width: "100%", background: "#1A1A2E",
-                    border: "1px solid #2E2E4A", borderRadius: 10,
-                    padding: "12px 14px", color: "#E8E8F0",
+                    width: "100%", background: "#232324",
+                    border: "1px solid #363738", borderRadius: 10,
+                    padding: "12px 14px", color: "#E7E8EA",
                     fontSize: 15, fontFamily: "Inter, sans-serif",
                     resize: "vertical", outline: "none", boxSizing: "border-box", lineHeight: 1.5,
                   }}
-                  onFocus={(e) => { e.currentTarget.style.borderColor = "rgba(108,99,255,0.6)"; }}
-                  onBlur={(e) => { e.currentTarget.style.borderColor = "#2E2E4A"; }}
+                  onFocus={(e) => { e.currentTarget.style.borderColor = "rgba(0,119,255,0.6)"; }}
+                  onBlur={(e) => { e.currentTarget.style.borderColor = "#363738"; }}
                 />
               </div>
 
               {/* Image upload */}
               <div style={{ marginBottom: 28 }}>
-                <label style={{ display: "block", color: "#A7A9BE", fontSize: 12, fontWeight: 600, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                  Image <span style={{ color: "#6E708A", fontWeight: 400, textTransform: "none" }}>(optional)</span>
+                <label style={{ display: "block", color: "#909499", fontSize: 12, fontWeight: 600, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                  Изображение <span style={{ color: "#76787A", fontWeight: 400, textTransform: "none" }}>(необязательно)</span>
                 </label>
                 <div style={{
-                  border: "1.5px dashed #2E2E4A", borderRadius: 10,
+                  border: "1.5px dashed #363738", borderRadius: 10,
                   padding: "20px", textAlign: "center",
-                  background: "rgba(26,26,46,0.4)", cursor: "pointer",
+                  background: "rgba(35,35,36,0.4)", cursor: "pointer",
                 }}
-                  onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(108,99,255,0.5)"; }}
-                  onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#2E2E4A"; }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(0,119,255,0.5)"; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#363738"; }}
                 >
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" style={{ display: "block", margin: "0 auto 6px" }}>
-                    <rect x="2" y="5" width="20" height="16" rx="2.5" stroke="#6E708A" strokeWidth="1.4" />
-                    <circle cx="8" cy="10.5" r="1.8" stroke="#6E708A" strokeWidth="1.4" />
-                    <path d="M2 17l5-4.5 4 3.5 4-3 5 4" stroke="#6E708A" strokeWidth="1.4" strokeLinejoin="round" />
+                    <rect x="2" y="5" width="20" height="16" rx="2.5" stroke="#76787A" strokeWidth="1.4" />
+                    <circle cx="8" cy="10.5" r="1.8" stroke="#76787A" strokeWidth="1.4" />
+                    <path d="M2 17l5-4.5 4 3.5 4-3 5 4" stroke="#76787A" strokeWidth="1.4" strokeLinejoin="round" />
                   </svg>
-                  <span style={{ color: "#6E708A", fontSize: 12 }}>
-                    Drop an image or{" "}
-                    <span style={{ color: "#6C63FF", textDecoration: "underline", cursor: "pointer" }}>browse</span>
+                  <span style={{ color: "#76787A", fontSize: 12 }}>
+                    Перетащите изображение или{" "}
+                    <span style={{ color: "#0077FF", textDecoration: "underline", cursor: "pointer" }}>выберите файл</span>
                   </span>
                 </div>
               </div>
@@ -444,10 +449,10 @@ export default function EditQuestionsPage() {
               {/* Answer options */}
               <div>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-                  <span style={{ color: "#A7A9BE", fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                    Answer options{" "}
-                    <span style={{ color: "#6E708A", fontWeight: 400, textTransform: "none" }}>
-                      · {selectedQuestion.type === "SINGLE" ? "pick one correct" : "pick all correct"}
+                  <span style={{ color: "#909499", fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                    Варианты ответов{" "}
+                    <span style={{ color: "#76787A", fontWeight: 400, textTransform: "none" }}>
+                      · {selectedQuestion.type === "SINGLE" ? "один правильный" : "несколько правильных"}
                     </span>
                   </span>
                   <button
@@ -455,21 +460,22 @@ export default function EditQuestionsPage() {
                     style={{
                       display: "flex", alignItems: "center", gap: 4,
                       padding: "5px 10px", borderRadius: 6,
-                      border: "1px solid rgba(108,99,255,0.3)",
-                      background: "rgba(108,99,255,0.08)",
-                      color: "#6C63FF", fontSize: 12, fontWeight: 600, cursor: "pointer",
+                      border: "1px solid rgba(0,119,255,0.3)",
+                      background: "rgba(0,119,255,0.08)",
+                      color: "#0077FF", fontSize: 12, fontWeight: 600, cursor: "pointer",
+                      fontFamily: "Inter, sans-serif",
                     }}
                   >
                     <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
                       <path d="M5 1v8M1 5h8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
                     </svg>
-                    Add answer
+                    Добавить ответ
                   </button>
                 </div>
 
                 {selectedQuestion.answers.length === 0 && (
-                  <div style={{ color: "#6E708A", fontSize: 13, padding: "16px 0", textAlign: "center" }}>
-                    No answers yet — click "Add answer"
+                  <div style={{ color: "#76787A", fontSize: 13, padding: "16px 0", textAlign: "center" }}>
+                    Ответов пока нет — нажмите «Добавить ответ»
                   </div>
                 )}
 
@@ -480,8 +486,8 @@ export default function EditQuestionsPage() {
                     return (
                       <div key={ai} style={{
                         display: "flex", alignItems: "center", gap: 8,
-                        background: "#1A1A2E",
-                        border: `1px solid ${answer.isCorrect ? "rgba(67,217,143,0.35)" : "#2E2E4A"}`,
+                        background: "#232324",
+                        border: `1px solid ${answer.isCorrect ? "rgba(75,179,75,0.35)" : "#363738"}`,
                         borderRadius: 10, padding: "9px 10px",
                       }}>
                         {/* Letter badge */}
@@ -489,8 +495,7 @@ export default function EditQuestionsPage() {
                           flexShrink: 0, width: 24, height: 24, borderRadius: 6,
                           background: bg,
                           display: "flex", alignItems: "center", justifyContent: "center",
-                          fontSize: 11, fontWeight: 700,
-                          color: "#fff",
+                          fontSize: 11, fontWeight: 700, color: "#fff",
                         }}>
                           {letter}
                         </span>
@@ -498,14 +503,14 @@ export default function EditQuestionsPage() {
                         <input
                           value={answer.text}
                           onChange={(e) => updateAnswer(ai, { text: e.target.value })}
-                          placeholder={`Option ${letter}`}
+                          placeholder={`Вариант ${letter}`}
                           style={{
                             flex: 1, background: "transparent", border: "none",
-                            color: "#E8E8F0", fontSize: 14, fontFamily: "Inter, sans-serif", outline: "none",
+                            color: "#E7E8EA", fontSize: 14, fontFamily: "Inter, sans-serif", outline: "none",
                           }}
                         />
 
-                        {/* Correct toggle — pill switch */}
+                        {/* Correct toggle */}
                         <button
                           onClick={() => updateAnswer(ai, { isCorrect: !answer.isCorrect })}
                           style={{
@@ -515,16 +520,15 @@ export default function EditQuestionsPage() {
                         >
                           <span style={{
                             fontSize: 11, fontWeight: 600,
-                            color: answer.isCorrect ? "#43D98F" : "#6E708A",
+                            color: answer.isCorrect ? "#4BB34B" : "#76787A",
                             whiteSpace: "nowrap",
                           }}>
-                            {answer.isCorrect ? "Correct" : "Mark correct"}
+                            {answer.isCorrect ? "Правильный" : "Отметить верным"}
                           </span>
-                          {/* pill */}
                           <span style={{
                             position: "relative", display: "inline-block",
                             width: 32, height: 18, borderRadius: 999, flexShrink: 0,
-                            background: answer.isCorrect ? "#43D98F" : "#2E2E4A",
+                            background: answer.isCorrect ? "#4BB34B" : "#363738",
                             transition: "background 0.2s",
                           }}>
                             <span style={{
@@ -546,7 +550,7 @@ export default function EditQuestionsPage() {
                           }}
                         >
                           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                            <path d="M1.75 3.50016H12.25M4.66667 3.50016V2.3335H9.33333V3.50016M4.08333 3.50016V11.6668H9.91667V3.50016M5.83333 6.41683V9.91683M8.16667 6.41683V9.91683" stroke="#6E708A" strokeWidth="1.16667" strokeLinecap="round" strokeLinejoin="round" />
+                            <path d="M1.75 3.50016H12.25M4.66667 3.50016V2.3335H9.33333V3.50016M4.08333 3.50016V11.6668H9.91667V3.50016M5.83333 6.41683V9.91683M8.16667 6.41683V9.91683" stroke="#76787A" strokeWidth="1.16667" strokeLinecap="round" strokeLinejoin="round" />
                           </svg>
                         </button>
                       </div>
@@ -561,45 +565,41 @@ export default function EditQuestionsPage() {
         {/* ── Right: question settings ── */}
         <aside style={{
           width: 220, flexShrink: 0,
-          background: "#0D0C1A", borderLeft: "1px solid #2E2E4A",
+          background: "#19191A", borderLeft: "1px solid #363738",
           overflowY: "auto", padding: "20px 16px",
           display: selectedQuestion ? "block" : "none",
         }}>
         {selectedQuestion && (<>
-          <div style={{ color: "#E8E8F0", fontWeight: 600, fontSize: 13, marginBottom: 16 }}>
-            Question settings
+          <div style={{ color: "#E7E8EA", fontWeight: 600, fontSize: 13, marginBottom: 16 }}>
+            Настройки вопроса
           </div>
 
-          {/* Time limit */}
           <QuizSettingSelect
-            label="Time limit"
+            label="Время ответа"
             value={selectedQuestion.timeLimit}
             options={[10, 20, 30, 60, 90, 120]}
-            format={(v) => `${v} s`}
+            format={(v) => `${v} с`}
             onChange={(v) => updateQuestion({ timeLimit: v })}
           />
-          {/* Points */}
           <QuizSettingSelect
-            label="Points"
+            label="Очки"
             value={selectedQuestion.points}
             options={[500, 1000, 2000, 5000]}
             format={(v) => v.toLocaleString()}
             onChange={(v) => updateQuestion({ points: v })}
           />
 
-          <div style={{ height: 1, background: "#2E2E4A", margin: "14px 0" }} />
+          <div style={{ height: 1, background: "#363738", margin: "14px 0" }} />
 
-          {/* Difficulty */}
-          <div style={{ color: "#A7A9BE", fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
-            Difficulty
+          <div style={{ color: "#909499", fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
+            Сложность
           </div>
           <DifficultyPicker />
 
-          <div style={{ height: 1, background: "#2E2E4A", margin: "14px 0" }} />
+          <div style={{ height: 1, background: "#363738", margin: "14px 0" }} />
 
-          {/* Tags */}
-          <div style={{ color: "#A7A9BE", fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
-            Tags
+          <div style={{ color: "#909499", fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
+            Теги
           </div>
           <TagsEditor
             tags={selectedQuestion.tags}
@@ -624,19 +624,19 @@ function QuizSettingSelect({
 }) {
   return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-      <span style={{ color: "#A7A9BE", fontSize: 13 }}>{label}</span>
+      <span style={{ color: "#909499", fontSize: 13 }}>{label}</span>
       <select
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
         style={{
-          background: "#1A1A2E", border: "1px solid #2E2E4A", borderRadius: 6,
-          color: "#E8E8F0", fontSize: 12, fontWeight: 600,
+          background: "#232324", border: "1px solid #363738", borderRadius: 6,
+          color: "#E7E8EA", fontSize: 12, fontWeight: 600,
           padding: "3px 6px", cursor: "pointer", outline: "none",
           fontFamily: "Inter, sans-serif",
         }}
       >
         {options.map((o) => (
-          <option key={o} value={o}>{format(o)}</option>
+          <option key={o} value={o} style={{ background: "#232324" }}>{format(o)}</option>
         ))}
       </select>
     </div>
@@ -677,15 +677,15 @@ function TagsEditor({ tags, onChange }: { tags: string[]; onChange: (tags: strin
         <span key={tag} style={{
           display: "flex", alignItems: "center", gap: 4,
           padding: "3px 7px 3px 8px", borderRadius: 999,
-          background: "rgba(108,99,255,0.12)", border: "1px solid rgba(108,99,255,0.25)",
-          color: "#B9B3FF", fontSize: 11,
+          background: "rgba(0,119,255,0.1)", border: "1px solid rgba(0,119,255,0.25)",
+          color: "#71AAEB", fontSize: 11,
         }}>
           {tag}
           <button
             onClick={() => removeTag(tag)}
             style={{
               background: "none", border: "none", cursor: "pointer",
-              color: "#6C63FF", fontSize: 13, lineHeight: 1, padding: 0,
+              color: "#0077FF", fontSize: 13, lineHeight: 1, padding: 0,
               display: "flex", alignItems: "center",
             }}
           >
@@ -703,11 +703,11 @@ function TagsEditor({ tags, onChange }: { tags: string[]; onChange: (tags: strin
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={onKeyDown}
           onBlur={commit}
-          placeholder="tag name…"
+          placeholder="тег…"
           style={{
             width: 80, padding: "3px 8px", borderRadius: 999,
-            background: "rgba(108,99,255,0.08)", border: "1px solid rgba(108,99,255,0.4)",
-            color: "#E8E8F0", fontSize: 11, fontFamily: "Inter, sans-serif", outline: "none",
+            background: "rgba(0,119,255,0.08)", border: "1px solid rgba(0,119,255,0.4)",
+            color: "#E7E8EA", fontSize: 11, fontFamily: "Inter, sans-serif", outline: "none",
           }}
         />
       ) : (
@@ -715,53 +715,22 @@ function TagsEditor({ tags, onChange }: { tags: string[]; onChange: (tags: strin
           onClick={startAdding}
           style={{
             padding: "3px 8px", borderRadius: 999,
-            background: "transparent", border: "1px dashed #2E2E4A",
-            color: "#6E708A", fontSize: 11, cursor: "pointer",
+            background: "transparent", border: "1px dashed #363738",
+            color: "#76787A", fontSize: 11, cursor: "pointer",
+            fontFamily: "Inter, sans-serif",
           }}
-        >+ add</button>
+        >+ добавить</button>
       )}
     </div>
   );
 }
 
-// Small helper components
-function SettingRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-      <span style={{ color: "#A7A9BE", fontSize: 13 }}>{label}</span>
-      <span style={{ color: "#E8E8F0", fontSize: 13, fontWeight: 600 }}>{value}</span>
-    </div>
-  );
-}
-
-function ToggleRow({ label, defaultOn }: { label: string; defaultOn: boolean }) {
-  const [on, setOn] = useState(defaultOn);
-  return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-      <span style={{ color: "#A7A9BE", fontSize: 13 }}>{label}</span>
-      <button
-        onClick={() => setOn(!on)}
-        style={{
-          width: 32, height: 18, borderRadius: 999, border: "none", cursor: "pointer",
-          background: on ? "#6C63FF" : "#2E2E4A", position: "relative", transition: "background 0.2s",
-        }}
-      >
-        <span style={{
-          position: "absolute", top: 2, left: on ? 16 : 2,
-          width: 14, height: 14, borderRadius: "50%", background: "#fff",
-          transition: "left 0.2s",
-        }} />
-      </button>
-    </div>
-  );
-}
-
 function DifficultyPicker() {
-  const [d, setD] = useState<"Easy" | "Medium" | "Hard">("Medium");
+  const [d, setD] = useState<"Лёгко" | "Средне" | "Сложно">("Средне");
   const opts = [
-    { label: "Easy",   color: "#43D98F" },
-    { label: "Medium", color: "#FFB547" },
-    { label: "Hard",   color: "#FF6584" },
+    { label: "Лёгко",  color: "#4BB34B" },
+    { label: "Средне", color: "#FFA000" },
+    { label: "Сложно", color: "#E64646" },
   ] as const;
   return (
     <div style={{ display: "flex", gap: 5 }}>
@@ -771,9 +740,10 @@ function DifficultyPicker() {
           onClick={() => setD(label)}
           style={{
             flex: 1, padding: "6px 0", borderRadius: 6, border: "none", cursor: "pointer", fontSize: 11, fontWeight: 600,
-            background: d === label ? `${color}22` : "rgba(46,46,74,0.5)",
-            color: d === label ? color : "#6E708A",
+            background: d === label ? `${color}22` : "rgba(44,45,46,0.5)",
+            color: d === label ? color : "#76787A",
             outline: d === label ? `1px solid ${color}55` : "none",
+            fontFamily: "Inter, sans-serif",
           }}
         >
           {label}

@@ -13,7 +13,7 @@ export interface ServerToClientEvents {
   "quiz-started":     (data: { questionIndex: number }) => void;
   "question-started": (data: { questionIndex: number; endsAt: number }) => void;
   "answer-received":  (data: { votes: AnswerVotes; totalAnswered: number }) => void;
-  "question-ended":   (data: { correctAnswerIds: string[]; votes: AnswerVotes }) => void;
+  "question-ended":   (data: { correctAnswerIds: string[]; votes: AnswerVotes; questionIndex?: number }) => void;
   "score-update":     (players: Player[]) => void;
   "quiz-finished":    (players: Player[]) => void;
   "error":            (msg: string) => void;

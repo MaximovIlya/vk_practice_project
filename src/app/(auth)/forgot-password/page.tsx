@@ -24,9 +24,9 @@ export default function ForgotPasswordPage() {
     if (!res.ok) {
       try {
         const data = await res.json();
-        setError(data.error ?? "Something went wrong");
+        setError(data.error ?? "Что-то пошло не так");
       } catch {
-        setError("Something went wrong");
+        setError("Что-то пошло не так");
       }
     } else {
       setSubmitted(true);
@@ -34,7 +34,7 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-8" style={{ background: "#07060F" }}>
+    <div className="min-h-screen flex items-center justify-center p-8" style={{ background: "#19191A" }}>
       <div className="w-full max-w-sm space-y-6">
         {/* Logo */}
         <Link href="/login" className="flex items-center gap-1">
@@ -50,70 +50,70 @@ export default function ForgotPasswordPage() {
                 <feOffset dy="4" />
                 <feGaussianBlur stdDeviation="10" />
                 <feComposite in2="hardAlpha" operator="out" />
-                <feColorMatrix type="matrix" values="0 0 0 0 0.423529 0 0 0 0 0.388235 0 0 0 0 1 0 0 0 0.4 0" />
+                <feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0.467 0 0 0 0 1 0 0 0 0.4 0" />
                 <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow" />
                 <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow" result="shape" />
               </filter>
               <linearGradient id="b_fp" x1="20" y1="16" x2="56" y2="52" gradientUnits="userSpaceOnUse">
-                <stop stopColor="#6C63FF" />
-                <stop offset="1" stopColor="#FF6584" />
+                <stop stopColor="#0077FF" />
+                <stop offset="1" stopColor="#005CC4" />
               </linearGradient>
             </defs>
           </svg>
-          <span className="text-xl font-extrabold" style={{ color: "#FFFFFE" }}>Pulse</span>
+          <span className="text-xl font-extrabold" style={{ color: "#E7E8EA" }}>Pulse</span>
         </Link>
 
         {submitted ? (
           <div className="space-y-4">
             <div
               className="p-4 rounded-lg text-sm"
-              style={{ background: "rgba(75,68,204,0.15)", border: "1px solid #4B44CC", color: "#A7A9BE" }}
+              style={{ background: "rgba(0,119,255,0.12)", border: "1px solid #0077FF", color: "#909499" }}
             >
-              If an account with <strong style={{ color: "#FFFFFE" }}>{email}</strong> exists, a reset link has been sent. Check your inbox (or server console in dev mode).
+              Если аккаунт с адресом <strong style={{ color: "#E7E8EA" }}>{email}</strong> существует, ссылка для сброса отправлена. Проверьте почту.
             </div>
             <Link
               href="/login"
               className="block text-center text-sm font-semibold"
-              style={{ color: "#4B44CC" }}
+              style={{ color: "#0077FF" }}
             >
-              Back to login
+              Вернуться ко входу
             </Link>
           </div>
         ) : (
           <>
             <div>
-              <h2 className="text-2xl font-bold" style={{ color: "#FFFFFE" }}>
-                Reset your password
+              <h2 className="text-2xl font-bold" style={{ color: "#E7E8EA" }}>
+                Сброс пароля
               </h2>
-              <p className="text-sm mt-1" style={{ color: "#6E708A" }}>
-                Enter your email and we&apos;ll send a reset link.
+              <p className="text-sm mt-1" style={{ color: "#76787A" }}>
+                Введите email и мы отправим ссылку для сброса.
               </p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold" style={{ color: "#A7A9BE" }}>
-                  Email
+                <label className="text-xs font-semibold" style={{ color: "#909499" }}>
+                  Электронная почта
                 </label>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="example.com"
+                  placeholder="example@mail.ru"
                   required
                   className="w-full px-3 py-2.5 rounded-lg text-sm outline-none transition-colors"
                   style={{
-                    background: "#1A1A2E",
-                    border: "1px solid #3D3D5F",
-                    color: "#FFFFFE",
+                    background: "#232324",
+                    border: "1px solid #363738",
+                    color: "#E7E8EA",
                   }}
-                  onFocus={(e) => (e.currentTarget.style.borderColor = "#4B44CC")}
-                  onBlur={(e) => (e.currentTarget.style.borderColor = "#3D3D5F")}
+                  onFocus={(e) => (e.currentTarget.style.borderColor = "#0077FF")}
+                  onBlur={(e) => (e.currentTarget.style.borderColor = "#363738")}
                 />
               </div>
 
               {error && (
-                <p className="text-xs" style={{ color: "#FF6584" }}>
+                <p className="text-xs" style={{ color: "#E64646" }}>
                   {error}
                 </p>
               )}
@@ -123,18 +123,18 @@ export default function ForgotPasswordPage() {
                 disabled={loading}
                 className="w-full py-2.5 rounded-[10px] text-sm font-semibold text-white transition-opacity disabled:opacity-60"
                 style={{
-                  background: "linear-gradient(135deg, #FFB547 0%, #FFB547 100%)",
-                  boxShadow: "0px 8px 24px rgba(255,181,71,0.33)",
+                  background: "linear-gradient(180deg, #0077FF 0%, #005CC4 100%)",
+                  boxShadow: "0px 8px 24px rgba(0,119,255,0.33)",
                 }}
               >
-                {loading ? "Sending…" : "Send reset link"}
+                {loading ? "Отправка…" : "Отправить ссылку"}
               </button>
             </form>
 
-            <p className="text-center text-sm" style={{ color: "#6E708A" }}>
-              Remember it?{" "}
-              <Link href="/login" className="font-semibold" style={{ color: "#4B44CC" }}>
-                Back to login
+            <p className="text-center text-sm" style={{ color: "#76787A" }}>
+              Вспомнили пароль?{" "}
+              <Link href="/login" className="font-semibold" style={{ color: "#0077FF" }}>
+                Войти
               </Link>
             </p>
           </>

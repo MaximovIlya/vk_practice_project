@@ -6,9 +6,12 @@ import { prisma } from "@/lib/db";
 type IO = SocketIOServer<ClientToServerEvents, ServerToClientEvents>;
 
 // In-memory session state
-const sessionTimers = new Map<string, ReturnType<typeof setTimeout>>();
+const sessionTimers  = new Map<string, ReturnType<typeof setTimeout>>();
+const sessionIndexes = new Map<string, number>(); // sessionId -> current question index
+const sessionEndsAt  = new Map<string, number>(); // sessionId -> current question endsAt timestamp
+const sessionReveal  = new Map<string, { correctAnswerIds: string[]; votes: Record<string, number> }>();
 // Track socket -> { sessionId, userId } for disconnect cleanup
-const socketPlayers = new Map<string, { sessionId: string; userId: string }>();
+const socketPlayers  = new Map<string, { sessionId: string; userId: string }>();
 
 function roomKey(sessionId: string) { return `session:${sessionId}`; }
 
@@ -20,8 +23,41 @@ export function initSocketServer(httpServer: HTTPServer) {
 
   io.on("connection", (socket) => {
 
-    socket.on("organizer-join", ({ sessionId }) => {
+    socket.on("organizer-join", async ({ sessionId }) => {
       socket.join(roomKey(sessionId));
+
+      // Restore current state if rejoining an active session
+      const sess = await prisma.quizSession.findUnique({ where: { id: sessionId } });
+      if (!sess || sess.status !== "ACTIVE") return;
+
+      const idx = sessionIndexes.get(sessionId) ?? 0;
+      const revealState = sessionReveal.get(sessionId);
+
+      if (revealState) {
+        socket.emit("question-ended", { ...revealState, questionIndex: idx });
+        const leaderboard = await getLeaderboard(sessionId);
+        socket.emit("score-update", leaderboard);
+      } else {
+        const endsAt = sessionEndsAt.get(sessionId);
+        if (endsAt !== undefined) {
+          socket.emit("question-started", { questionIndex: idx, endsAt });
+          // Restore live vote counts for organizer
+          const sessData = await prisma.quizSession.findUnique({
+            where: { id: sessionId },
+            include: { quiz: { include: { questions: { orderBy: { order: "asc" } } } }, players: true },
+          });
+          if (sessData) {
+            const q = sessData.quiz.questions[idx];
+            if (q) {
+              const votes = await getVotes(sessionId, q.id);
+              const totalAnswered = await prisma.playerAnswer.count({
+                where: { sessionPlayerId: { in: sessData.players.map((p) => p.id) }, questionId: q.id },
+              });
+              socket.emit("answer-received", { votes, totalAnswered });
+            }
+          }
+        }
+      }
     });
 
     socket.on("disconnect", () => {
@@ -57,6 +93,20 @@ export function initSocketServer(httpServer: HTTPServer) {
       // can see players who were already in the room before them.
       const currentPlayers = await getLeaderboard(session.id);
       socket.emit("score-update", currentPlayers);
+
+      // Restore current question state if rejoining an active session
+      if (session.status === "ACTIVE") {
+        const idx = sessionIndexes.get(session.id) ?? 0;
+        const revealState = sessionReveal.get(session.id);
+        if (revealState) {
+          socket.emit("question-ended", { ...revealState, questionIndex: idx });
+        } else {
+          const endsAt = sessionEndsAt.get(session.id);
+          if (endsAt !== undefined) {
+            socket.emit("question-started", { questionIndex: idx, endsAt });
+          }
+        }
+      }
     });
 
     socket.on("start-quiz", async ({ sessionId }) => {
@@ -82,10 +132,7 @@ export function initSocketServer(httpServer: HTTPServer) {
       });
       if (!session) return;
 
-      // Find current question index from metadata (stored in timer map key)
-      const currentIdx = (sessionTimers.has(`${sessionId}:idx`)
-        ? Number((sessionTimers as unknown as Map<string, number>).get(`${sessionId}:idx`))
-        : 0);
+      const currentIdx = sessionIndexes.get(sessionId) ?? 0;
       const nextIdx = currentIdx + 1;
 
       if (nextIdx >= session.quiz.questions.length) {
@@ -117,23 +164,40 @@ export function initSocketServer(httpServer: HTTPServer) {
       if (!question) return;
 
       const correctIds = question.answers.filter((a) => a.isCorrect).map((a) => a.id);
-      const isCorrect = answerIds.length === correctIds.length &&
-        answerIds.every((id) => correctIds.includes(id));
+
+      let isCorrect: boolean;
+      let earnedPoints: number;
+
+      if (question.type === "MULTIPLE") {
+        const correctlySelected = answerIds.filter((id) => correctIds.includes(id)).length;
+        const wronglySelected = answerIds.filter((id) => !correctIds.includes(id)).length;
+        isCorrect = correctlySelected === correctIds.length && wronglySelected === 0;
+        if (correctlySelected > 0 && correctIds.length > 0) {
+          const raw = (correctlySelected / correctIds.length) * question.points;
+          earnedPoints = Math.round(raw / 5) * 5;
+        } else {
+          earnedPoints = 0;
+        }
+      } else {
+        isCorrect = answerIds.length === correctIds.length &&
+          answerIds.every((id) => correctIds.includes(id));
+        earnedPoints = isCorrect ? question.points : 0;
+      }
 
       await prisma.playerAnswer.create({
         data: {
           sessionPlayerId: sp.id,
           questionId,
           isCorrect,
-          points: isCorrect ? question.points : 0,
+          points: earnedPoints,
           answers: { connect: answerIds.map((id) => ({ id })) },
         },
       });
 
-      if (isCorrect) {
+      if (earnedPoints > 0) {
         await prisma.sessionPlayer.update({
           where: { id: sp.id },
-          data: { score: { increment: question.points } },
+          data: { score: { increment: earnedPoints } },
         });
       }
 
@@ -159,20 +223,32 @@ async function startQuestion(io: IO, sessionId: string, idx: number) {
   const question = session.quiz.questions[idx];
   if (!question) return finishQuiz(io, sessionId);
 
-  // Store current idx
-  (sessionTimers as unknown as Map<string, number>).set(`${sessionId}:idx`, idx);
+  const advTimer = sessionTimers.get(`${sessionId}:advance`);
+  if (advTimer) { clearTimeout(advTimer); sessionTimers.delete(`${sessionId}:advance`); }
+  const qTimer = sessionTimers.get(sessionId);
+  if (qTimer) { clearTimeout(qTimer); sessionTimers.delete(sessionId); }
+  sessionIndexes.set(sessionId, idx);
+  sessionReveal.delete(sessionId);
 
   const endsAt = Date.now() + question.timeLimit * 1000;
+  sessionEndsAt.set(sessionId, endsAt);
   io.to(roomKey(sessionId)).emit("question-started", { questionIndex: idx, endsAt });
 
-  const timer = setTimeout(() => revealQuestion(io, sessionId), question.timeLimit * 1000);
+  const timer = setTimeout(
+    () => revealQuestion(io, sessionId).catch(e => console.error("[revealQuestion]", e)),
+    question.timeLimit * 1000,
+  );
   sessionTimers.set(sessionId, timer);
 }
 
 async function revealQuestion(io: IO, sessionId: string) {
   sessionTimers.delete(sessionId);
+  // NOTE: deliberately do NOT delete sessionEndsAt here. Restoration logic
+  // checks sessionReveal first (it takes priority), so a lingering endsAt is
+  // harmless — and keeping it avoids a race window where a rejoining player
+  // finds neither reveal state nor endsAt and gets stuck on the loading screen.
 
-  const idx = (sessionTimers as unknown as Map<string, number>).get(`${sessionId}:idx`) ?? 0;
+  const idx = sessionIndexes.get(sessionId) ?? 0;
 
   const session = await prisma.quizSession.findUnique({
     where: { id: sessionId },
@@ -183,17 +259,47 @@ async function revealQuestion(io: IO, sessionId: string) {
   const question = session.quiz.questions[idx as number];
   if (!question) return;
 
+  // For the final question we skip the 5-second reveal window entirely and jump
+  // straight to the results — there is no "next question" to count down to.
+  const isLast = (idx as number) >= session.quiz.questions.length - 1;
+  if (isLast) {
+    await finishQuiz(io, sessionId);
+    return;
+  }
+
   const correctAnswerIds = question.answers.filter((a) => a.isCorrect).map((a) => a.id);
   const votes = await getVotes(sessionId, question.id);
 
-  io.to(roomKey(sessionId)).emit("question-ended", { correctAnswerIds, votes });
+  sessionReveal.set(sessionId, { correctAnswerIds, votes });
+  io.to(roomKey(sessionId)).emit("question-ended", { correctAnswerIds, votes, questionIndex: idx as number });
 
   // Update scores in leaderboard
   const players = await getLeaderboard(sessionId);
   io.to(roomKey(sessionId)).emit("score-update", players);
+
+  // Auto-advance after 5-second reveal window
+  const nextIdx = (idx as number) + 1;
+  const advanceTimer = setTimeout(async () => {
+    sessionTimers.delete(`${sessionId}:advance`);
+    try {
+      if (nextIdx >= session.quiz.questions.length) {
+        await finishQuiz(io, sessionId);
+      } else {
+        await startQuestion(io, sessionId, nextIdx);
+      }
+    } catch (e) {
+      console.error("[auto-advance]", e);
+    }
+  }, 5000);
+  sessionTimers.set(`${sessionId}:advance`, advanceTimer);
 }
 
 async function finishQuiz(io: IO, sessionId: string) {
+  const advTimer = sessionTimers.get(`${sessionId}:advance`);
+  if (advTimer) { clearTimeout(advTimer); sessionTimers.delete(`${sessionId}:advance`); }
+  sessionIndexes.delete(sessionId);
+  sessionEndsAt.delete(sessionId);
+  sessionReveal.delete(sessionId);
   await prisma.quizSession.update({ where: { id: sessionId }, data: { status: "FINISHED" } });
   const players = await getLeaderboard(sessionId);
   io.to(roomKey(sessionId)).emit("quiz-finished", players);
