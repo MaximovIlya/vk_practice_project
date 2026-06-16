@@ -13,18 +13,20 @@ export interface ServerToClientEvents {
   "quiz-started":     (data: { questionIndex: number }) => void;
   "question-started": (data: { questionIndex: number; endsAt: number }) => void;
   "answer-received":  (data: { votes: AnswerVotes; totalAnswered: number }) => void;
-  "answer-result":    (data: { points: number; isCorrect: boolean }) => void;
-  "question-ended":   (data: { correctAnswerIds: string[]; votes: AnswerVotes; questionIndex?: number }) => void;
+  "answer-result":    (data: { points: number; isCorrect: boolean; penaltyPoints?: number }) => void;
+  "question-ended":   (data: { correctAnswerIds: string[]; votes: AnswerVotes; questionIndex?: number; isLast?: boolean }) => void;
   "score-update":     (players: Player[]) => void;
-  "quiz-finished":    (players: Player[]) => void;
-  "error":            (msg: string) => void;
+  "quiz-finished":      (players: Player[]) => void;
+  "session-cancelled":  () => void;
+  "error":              (msg: string) => void;
 }
 
 export interface ClientToServerEvents {
-  "organizer-join": (data: { sessionId: string }) => void;
-  "join-room":     (data: { roomCode: string; userId: string; name: string }) => void;
-  "start-quiz":    (data: { sessionId: string }) => void;
-  "next-question": (data: { sessionId: string }) => void;
-  "end-question":  (data: { sessionId: string }) => void;
-  "submit-answer": (data: { sessionId: string; questionId: string; answerIds: string[]; userId: string }) => void;
+  "organizer-join":   (data: { sessionId: string }) => void;
+  "join-room":        (data: { roomCode: string; userId: string; name: string }) => void;
+  "start-quiz":       (data: { sessionId: string }) => void;
+  "next-question":    (data: { sessionId: string }) => void;
+  "end-question":     (data: { sessionId: string }) => void;
+  "submit-answer":    (data: { sessionId: string; questionId: string; answerIds: string[]; userId: string }) => void;
+  "cancel-session":   (data: { sessionId: string }) => void;
 }

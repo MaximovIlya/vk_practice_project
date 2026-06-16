@@ -36,6 +36,9 @@ export default async function DashboardPage() {
       category: q.category,
       questionCount: q._count.questions,
       archived: q.archived,
+      difficulty: q.difficulty,
+      tags: q.tags,
+      coverImageUrl: q.coverImageUrl,
       totalPlays: q.sessions.reduce((sum, s) => sum + s._count.players, 0),
       lastRun:
         q.sessions

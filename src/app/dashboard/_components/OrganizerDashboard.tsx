@@ -277,32 +277,13 @@ export default function OrganizerDashboard({ user, stats, quizzes, activeSession
 
           {/* Action buttons */}
           <div style={{ display: "flex", gap: "10px", alignItems: "center", flexShrink: 0 }}>
-            <button onClick={() => router.push("/dashboard/quizzes?focus=1")} style={{
-              display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
-              padding: "0 18px",
-              width: "108px", height: "40px",
-              borderRadius: "8px",
-              background: "#2C2D2E",
-              boxShadow: "inset 0 0 0 1px #363738",
-              border: "none",
-              color: "#E7E8EA",
-              fontSize: "14px", fontWeight: 600,
-              cursor: "pointer",
-              fontFamily: "Inter, sans-serif",
-            }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
-              </svg>
-              Поиск
-            </button>
-
             <Link href="/quiz/create" style={{
               display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
               padding: "0 28px",
               height: "40px",
               borderRadius: "8px",
               background: "linear-gradient(180deg, #0077FF 0%, #005CC4 100%)",
-              boxShadow: "0 4px 16px rgba(0,119,255,0.35), inset 0 1px 0 rgba(255,255,255,0.2)",
+             // boxShadow: "0 4px 16px rgba(0,119,255,0.35), inset 0 1px 0 rgba(255,255,255,0.2)",
               color: "#E7E8EA",
               fontSize: "14px", fontWeight: 600,
               textDecoration: "none",
@@ -318,7 +299,7 @@ export default function OrganizerDashboard({ user, stats, quizzes, activeSession
         {/* ── Stats row (4 columns) ── */}
         <div style={{
           display: "grid",
-          gridTemplateColumns: "repeat(4, 1fr)",
+          gridTemplateColumns: "repeat(3, 1fr)",
           gap: "16px",
           paddingTop: "16px",
         }}>
@@ -362,24 +343,13 @@ export default function OrganizerDashboard({ user, stats, quizzes, activeSession
                 </svg>
               ),
             },
-            {
-              label: "Активные комнаты",
-              value: stats.activeRooms,
-              delta: stats.activeRooms === 0 ? "Нет активных комнат" : "Сейчас активно",
-              deltaColor: stats.activeRooms > 0 ? "#4BB34B" : "#76787A",
-              icon: (
-                <svg width="10" height="11" viewBox="0 0 10 11" fill="none">
-                  <path d="M0.666687 0.666504L8.66669 5.33317L0.666687 9.99984V0.666504Z" stroke="#76787A" strokeWidth="1.33333" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              ),
-            },
           ].map((card) => (
             <div key={card.label} style={{
               background: "#232324",
               border: "1px solid #363738",
               borderRadius: "12px",
               padding: "21px",
-              boxShadow: "0 8px 24px rgba(0,0,0,0.3), inset 0 1px 0 1px rgba(255,255,255,0.04)",
+              //boxShadow: "0 8px 24px rgba(0,0,0,0.3), inset 0 1px 0 1px rgba(255,255,255,0.04)",
               display: "flex", flexDirection: "column", gap: "6px",
             }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", paddingBottom: "10px" }}>
@@ -421,7 +391,7 @@ export default function OrganizerDashboard({ user, stats, quizzes, activeSession
             </Link>
           </div>
 
-          <QuizLibrary quizzes={quizzes} />
+          <QuizLibrary quizzes={quizzes.slice(0, 6)} />
         </div>
       </div>
     </div>

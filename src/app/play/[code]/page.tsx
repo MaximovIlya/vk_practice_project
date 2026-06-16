@@ -4,14 +4,15 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
-import { getSocket, disconnectSocket } from "@/lib/socket";
+import { getSocket } from "@/lib/socket";
 import type { AnswerVotes } from "@/types/socket";
+import { plural } from "@/lib/plural";
 
 type Answer      = { id: string; text: string };
-type Question    = { id: string; text: string; type: string; timeLimit: number; points: number; answers: Answer[] };
-type QuizData    = { id: string; title: string; hostName: string; scoring?: string; questions: Question[] };
+type Question    = { id: string; text: string; type: string; timeLimit: number; points: number; answers: Answer[]; imageUrl?: string | null };
+type QuizData    = { id: string; title: string; description?: string; category?: string; hostName: string; scoring?: string; difficulty?: string; tags?: string[]; coverImageUrl?: string | null; questions: Question[] };
 type SessionData = { id: string; roomCode: string; status: string };
-type Phase       = "LOADING" | "WAITING" | "ACTIVE" | "REVEAL" | "FINISHED";
+type Phase       = "LOADING" | "WAITING" | "ACTIVE" | "REVEAL" | "FINISHED" | "CANCELLED";
 
 const ANS_GRADIENTS = [
   "linear-gradient(135deg,#FF6584 0%,#E54170 100%)",
@@ -50,6 +51,8 @@ export default function PlayPage() {
   const [answerTimes,  setAnswerTimes]  = useState<number[]>([]);
   const [bestStreak,   setBestStreak]   = useState(0);
   const [roundPoints,  setRoundPoints]  = useState(0); // points earned on the current question
+  const [penaltyPoints, setPenaltyPoints] = useState(0); // points lost due to wrong selections (MULTIPLE)
+  const [isLastReveal, setIsLastReveal] = useState(false); // reveal shown is for the final question
   const streakRef = useRef(0);
 
   const timerRef      = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -70,8 +73,6 @@ export default function PlayPage() {
 
   // Partial: earned some points but not the full amount (only possible for MULTIPLE questions)
   const isPartial = !isCorrect && roundPoints > 0;
-  const correctlySelectedCount = selectedIds.filter(id => correctIds.includes(id)).length;
-  const wronglySelectedCount = selectedIds.filter(id => !correctIds.includes(id)).length;
 
   // Load session
   useEffect(() => {
@@ -114,12 +115,12 @@ export default function PlayPage() {
 
     socket.on("quiz-started", ({ questionIndex }) => {
       setQIdx(questionIndex); setSelectedIds([]); setSubmitted(false);
-      setVotes({}); setCorrectIds([]); setRoundPoints(0); setPhase("ACTIVE");
+      setVotes({}); setCorrectIds([]); setRoundPoints(0); setPenaltyPoints(0); setPhase("ACTIVE");
     });
 
     socket.on("question-started", ({ questionIndex, endsAt }) => {
       setQIdx(questionIndex); setSelectedIds([]); setSubmitted(false);
-      setVotes({}); setCorrectIds([]); setRoundPoints(0); setPhase("ACTIVE");
+      setVotes({}); setCorrectIds([]); setRoundPoints(0); setPenaltyPoints(0); setPhase("ACTIVE");
       const tick = () => {
         const left = Math.max(0, Math.ceil((endsAt - Date.now()) / 1000));
         setTimeLeft(left);
@@ -132,11 +133,15 @@ export default function PlayPage() {
 
     socket.on("answer-received", ({ votes: v }) => setVotes(v));
 
-    socket.on("answer-result", ({ points }) => setRoundPoints(points));
+    socket.on("answer-result", ({ points, penaltyPoints: penalty }) => {
+      setRoundPoints(points);
+      setPenaltyPoints(penalty ?? 0);
+    });
 
-    socket.on("question-ended", ({ correctAnswerIds, votes: v, questionIndex }) => {
+    socket.on("question-ended", ({ correctAnswerIds, votes: v, questionIndex, isLast }) => {
       if (questionIndex !== undefined) setQIdx(questionIndex);
       setPhase("REVEAL");
+      setIsLastReveal(!!isLast);
       setCorrectIds(correctAnswerIds);
       setVotes(v);
       if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
@@ -170,15 +175,42 @@ export default function PlayPage() {
         .catch(() => {});
     });
 
+    socket.on("session-cancelled", () => setPhase("CANCELLED"));
+
     return () => {
       socket.off("connect", doJoin);
       socket.off("error"); socket.off("player-joined"); socket.off("player-left");
       socket.off("quiz-started"); socket.off("question-started");
       socket.off("answer-received"); socket.off("answer-result"); socket.off("question-ended");
-      socket.off("score-update"); socket.off("quiz-finished");
+      socket.off("score-update"); socket.off("quiz-finished"); socket.off("session-cancelled");
       if (timerRef.current) clearInterval(timerRef.current);
-      disconnectSocket();
+      // Don't destroy the socket on cleanup — keep it alive so the player can
+      // reconnect quickly after pressing browser back/forward.
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [quizSession?.id, auth?.user?.id]);
+
+  // Re-join the room whenever the page becomes visible again (browser back button,
+  // tab switch, app switch). The server's join-room handler is idempotent and will
+  // restore the current question state.
+  useEffect(() => {
+    if (!quizSession || !auth?.user) return;
+    const uid = auth.user.id;
+    const uname = auth.user.name ?? "Аноним";
+    const roomCode = quizSession.roomCode;
+
+    const onVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      const s = getSocket();
+      if (s.connected) {
+        s.emit("join-room", { roomCode, userId: uid, name: uname });
+      } else {
+        s.once("connect", () => s.emit("join-room", { roomCode, userId: uid, name: uname }));
+      }
+    };
+
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [quizSession?.id, auth?.user?.id]);
 
@@ -199,9 +231,7 @@ export default function PlayPage() {
     });
   }, [quizSession, currentQuestion, auth, submitted, selectedIds, timeLeft]);
 
-  useEffect(() => {
-    if (currentQuestion?.type === "SINGLE" && selectedIds.length === 1 && !submitted) submitAnswer();
-  }, [selectedIds, currentQuestion?.type, submitted, submitAnswer]);
+  // Auto-submit removed — single choice now requires explicit confirmation like multiple choice.
 
   // ── Loading / Error ──
   if (phase === "LOADING" || !quiz) {
@@ -251,23 +281,131 @@ export default function PlayPage() {
         {/* ══ WAITING ══ */}
         {phase === "WAITING" && (
           <>
-            <div style={{ position: "absolute", width: 500, height: 500, borderRadius: "50%", background: "radial-gradient(circle,rgba(0,119,255,0.25) 0%,transparent 60%)", top: "calc(40% - 250px)", left: "calc(30% - 250px)", filter: "blur(40px)", pointerEvents: "none" }} />
-            <div style={{ position: "absolute", width: 400, height: 400, borderRadius: "50%", background: "radial-gradient(circle,rgba(75,179,75,0.15) 0%,transparent 60%)", top: "calc(60% - 200px)", left: "calc(70% - 200px)", filter: "blur(40px)", pointerEvents: "none" }} />
+            {/* <div style={{ position: "absolute", width: 500, height: 500, borderRadius: "50%", background: "radial-gradient(circle,rgba(0,119,255,0.25) 0%,transparent 60%)", top: "calc(40% - 250px)", left: "calc(30% - 250px)", filter: "blur(40px)", pointerEvents: "none" }} />
+            <div style={{ position: "absolute", width: 400, height: 400, borderRadius: "50%", background: "radial-gradient(circle,rgba(75,179,75,0.15) 0%,transparent 60%)", top: "calc(60% - 200px)", left: "calc(70% - 200px)", filter: "blur(40px)", pointerEvents: "none" }} /> */}
 
             <div style={{ position: "relative", zIndex: 1, flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 48 }}>
               <div style={{ textAlign: "center", maxWidth: 560 }}>
 
-                <div style={{ position: "relative", width: 140, height: 140, margin: "0 auto 32px" }}>
-                  <div style={{ position: "absolute", inset: 0, borderRadius: "50%", background: "linear-gradient(135deg,#0077FF,#005CC4)", opacity: 0.3, filter: "blur(20px)" }} />
-                  <div style={{ position: "absolute", inset: 16, borderRadius: "50%", background: avatarBg(myName), display: "flex", alignItems: "center", justifyContent: "center", fontSize: 44, fontWeight: 800, color: "white", boxShadow: "0 20px 60px rgba(0,119,255,0.4)" }}>
-                    {initials(myName)}
-                  </div>
-                  <div style={{ position: "absolute", inset: -8, borderRadius: "50%", border: "2px solid rgba(0,119,255,0.3)" }} />
-                  <div style={{ position: "absolute", inset: -20, borderRadius: "50%", border: "1px solid rgba(0,119,255,0.15)" }} />
-                </div>
+                {/* Quiz card */}
+                {(() => {
+                  const catGradients: Record<string, string> = {
+                    Engineering:   "linear-gradient(165deg, #E64646 0%, rgba(230,70,70,0.6) 100%)",
+                    Internal:      "linear-gradient(165deg, #0077FF 0%, rgba(0,119,255,0.6) 100%)",
+                    General:       "linear-gradient(165deg, #4BB34B 0%, rgba(75,179,75,0.6) 100%)",
+                    Education:     "linear-gradient(165deg, #FFA000 0%, rgba(255,160,0,0.6) 100%)",
+                    Entertainment: "linear-gradient(165deg, #4DC4FF 0%, rgba(77,196,255,0.6) 100%)",
+                    Science:       "linear-gradient(165deg, #06B6D4 0%, rgba(6,182,212,0.6) 100%)",
+                    History:       "linear-gradient(165deg, #F97316 0%, rgba(249,115,22,0.6) 100%)",
+                    Geography:     "linear-gradient(165deg, #14B8A6 0%, rgba(20,184,166,0.6) 100%)",
+                  };
+                  const catLabels: Record<string, string> = {
+                    Engineering: "Технологии", Internal: "Корпоративный", General: "Общие знания",
+                    Education: "Образование", Entertainment: "Развлечения", Science: "Наука",
+                    History: "История", Geography: "География",
+                  };
+                  const scoringLabels: Record<string, string> = {
+                    standard: "Стандарт", speed: "Бонус за скорость", streak: "Серия комбо",
+                  };
+                  const difficultyColors: Record<string, string> = {
+                    "Легко": "#4BB34B", "Средне": "#FFA000", "Сложно": "#E64646",
+                  };
+                  const cat = quiz.category ?? "";
+                  const grad = catGradients[cat] ?? "linear-gradient(165deg,#0077FF,#005CC4)";
+                  const catLabel = catLabels[cat] ?? cat;
+                  const scoringLabel = scoringLabels[quiz.scoring ?? ""] ?? (quiz.scoring ?? "Стандарт");
+                  const diffColor = difficultyColors[quiz.difficulty ?? ""];
+                  const quizTags = quiz.tags ?? [];
+                  return (
+                    <div style={{
+                      width: 460, maxWidth: "100%", margin: "0 auto 32px",
+                      borderRadius: 12, overflow: "hidden",
+                      background: "#232324", border: "1px solid #363738",
+                      //boxShadow: "0 8px 24px rgba(0,0,0,0.3), inset 0 1px 0 1px rgba(255,255,255,0.04)",
+                    }}>
+                      {/* Cover */}
+                      <div style={{
+                        position: "relative",
+                        margin: "20px 20px 0",
+                        height: 168, borderRadius: 10, overflow: "hidden",
+                        background: quiz.coverImageUrl ? "#1A1A1B" : grad,
+                        display: "flex", flexDirection: "column",
+                        alignItems: "center", justifyContent: "center", gap: 8,
+                      }}>
+                        {quiz.coverImageUrl ? (
+                          <>
+                            {/* Blurred backdrop fills the frame so any aspect ratio looks clean */}
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={quiz.coverImageUrl} alt="" aria-hidden style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", filter: "blur(24px)", transform: "scale(1.2)" }} />
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={quiz.coverImageUrl} alt="Обложка квиза" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "contain", display: "block" }} />
+                          </>
+                        ) : (
+                          <>
+                            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                              <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" />
+                              <polyline points="21 15 16 10 5 21" />
+                            </svg>
+                            <span style={{ fontSize: 13, color: "rgba(255,255,255,0.85)" }}>Обложка квиза</span>
+                          </>
+                        )}
+                      </div>
 
-                <div style={{ fontSize: 14, color: "#76787A", textTransform: "uppercase" as const, letterSpacing: "0.1em", fontWeight: 600, marginBottom: 8 }}>Вы в комнате</div>
-                <div style={{ fontSize: 40, fontWeight: 800, letterSpacing: "-0.02em", marginBottom: 12 }}>{myName}</div>
+                      {/* Body */}
+                      <div style={{ padding: "0 20px 22px", textAlign: "left" as const }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginTop: 16, marginBottom: 8 }}>
+                          {catLabel && (
+                            <div style={{ display: "inline-flex", alignItems: "center", padding: "4px 10px 3px", borderRadius: 999, background: "rgba(0,0,0,0.3)", backdropFilter: "blur(8px)", fontSize: 12, fontWeight: 600, color: "white", textTransform: "uppercase" as const, letterSpacing: "0.02em" }}>
+                              {catLabel}
+                            </div>
+                          )}
+                          {quiz.difficulty && diffColor && (
+                            <div style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "4px 10px 3px", borderRadius: 999, background: `${diffColor}1A`, border: `1px solid ${diffColor}55` }}>
+                              <span style={{ width: 6, height: 6, borderRadius: "50%", background: diffColor }} />
+                              <span style={{ fontSize: 12, fontWeight: 600, color: diffColor }}>{quiz.difficulty}</span>
+                            </div>
+                          )}
+                        </div>
+
+                        <p style={{ fontSize: 20, fontWeight: 700, margin: "0 0 8px", color: "#E7E8EA", lineHeight: 1.2 }}>
+                          {quiz.title}
+                        </p>
+
+                        {quiz.description && (
+                          <p style={{ fontSize: 14, lineHeight: "21px", color: "#909499", margin: "0 0 16px" }}>{quiz.description}</p>
+                        )}
+
+                        <div style={{ display: "flex", gap: 18, alignItems: "center", marginTop: quiz.description ? 0 : 16 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6, lineHeight: 1 }}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#76787A" strokeWidth="2" strokeLinecap="round" style={{ flexShrink: 0, verticalAlign: "middle" }}>
+                              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                            </svg>
+                            <span style={{ fontSize: 14, color: "#76787A", verticalAlign: "middle" }}>{scoringLabel}</span>
+                          </div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6, lineHeight: 1 }}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#76787A" strokeWidth="2" strokeLinecap="round" style={{ flexShrink: 0, verticalAlign: "middle" }}>
+                              <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
+                              <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+                            </svg>
+                            <span style={{ fontSize: 14, color: "#76787A", verticalAlign: "middle" }}>{quiz.questions.length} вопр.</span>
+                          </div>
+                        </div>
+
+                        {quizTags.length > 0 && (
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 14 }}>
+                            {quizTags.map((tag) => (
+                              <span key={tag} style={{
+                                padding: "3px 9px", borderRadius: 999,
+                                background: "rgba(0,119,255,0.1)", border: "1px solid rgba(0,119,255,0.25)",
+                                color: "#71AAEB", fontSize: 12,
+                              }}>#{tag}</span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 <div style={{ display: "inline-flex", alignItems: "center", gap: 10, padding: "12px 22px", background: "#232324", border: "1px solid #363738", borderRadius: 999, marginBottom: 28 }}>
                   <div style={{ display: "flex", gap: 4 }}>
@@ -278,17 +416,12 @@ export default function PlayPage() {
                   <span style={{ fontSize: 15, color: "#909499" }}>Ждём, пока {quiz.hostName} начнёт квиз…</span>
                 </div>
 
-                <div style={{ fontSize: 22, fontWeight: 600, marginBottom: 4 }}>{quiz.title}</div>
-                <div style={{ fontSize: 14, color: "#76787A", marginBottom: 32 }}>
-                  {quiz.questions.length} вопросов · ведущий: {quiz.hostName}
-                </div>
-
                 {(() => {
                   const others = players.filter(p => p.userId !== myId);
                   return (
                   <>
                     <div style={{ fontSize: 12, color: "#76787A", marginBottom: 12, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>
-                      {others.length} {others.length === 1 ? "другой игрок" : others.length <= 4 ? "игрока" : "игроков"} в комнате
+                      {others.length} {plural(others.length, ["другой игрок", "других игрока", "других игроков"])} в комнате
                     </div>
                     <div style={{ display: "flex", justifyContent: "center", maxWidth: 380, margin: "0 auto", minHeight: 34 }}>
                       {others.slice(0, 12).map((p, i) => (
@@ -310,6 +443,39 @@ export default function PlayPage() {
           </>
         )}
 
+        {/* ══ CANCELLED ══ */}
+        {phase === "CANCELLED" && (
+          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 48 }}>
+            <div style={{ textAlign: "center", maxWidth: 400 }}>
+              <div style={{ width: 64, height: 64, borderRadius: "50%", background: "rgba(230,70,70,0.12)", border: "1px solid rgba(230,70,70,0.25)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px" }}>
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#E64646" strokeWidth="2" strokeLinecap="round">
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </div>
+              <div style={{ fontSize: 24, fontWeight: 800, letterSpacing: "-0.02em", marginBottom: 10 }}>Сессия завершена</div>
+              <div style={{ fontSize: 15, color: "#76787A", marginBottom: 32, lineHeight: 1.5 }}>
+                Организатор завершил сессию до начала квиза.
+              </div>
+              <button
+                onClick={() => router.push("/dashboard")}
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: 8,
+                  padding: "12px 28px", borderRadius: 10, border: "none",
+                  background: "linear-gradient(180deg,#0077FF,#005CC4)",
+                  color: "#fff", fontSize: 15, fontWeight: 600, cursor: "pointer",
+                  fontFamily: "Inter, sans-serif",
+                  boxShadow: "0 4px 16px rgba(0,119,255,0.35)",
+                }}
+              >
+                <svg width="14" height="14" viewBox="0 0 11 11" fill="none">
+                  <path d="M7 2L3.5 5.5 7 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                Вернуться на главную
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* ══ ACTIVE ══ */}
         {phase === "ACTIVE" && currentQuestion && (
           <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "24px 56px 36px" }}>
@@ -320,7 +486,7 @@ export default function PlayPage() {
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "#76787A" }}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFA000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-                {currentQuestion.points.toLocaleString()} очков · {currentQuestion.type === "SINGLE" ? "один ответ" : "несколько ответов"}
+                {currentQuestion.points.toLocaleString()} {plural(currentQuestion.points, ["очко", "очка", "очков"])} · {currentQuestion.type === "SINGLE" ? "один ответ" : "несколько ответов"}
               </div>
             </div>
 
@@ -348,6 +514,14 @@ export default function PlayPage() {
             })()}
 
             {/* Question card */}
+            {currentQuestion.imageUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={currentQuestion.imageUrl}
+                alt=""
+                style={{ display: "block", margin: "0 auto 16px", maxHeight: 260, maxWidth: "100%", borderRadius: 12, objectFit: "contain" }}
+              />
+            )}
             <div style={{ background: "#232324", border: "1px solid #363738", borderRadius: 16, padding: "36px 44px", textAlign: "center", marginBottom: 24 }}>
               <div style={{ fontSize: 36, fontWeight: 700, letterSpacing: "-0.02em", lineHeight: 1.2 }}>
                 {currentQuestion.text}
@@ -387,9 +561,9 @@ export default function PlayPage() {
               })}
             </div>
 
-            {currentQuestion.type === "MULTIPLE" && !submitted && selectedIds.length > 0 && (
+            {!submitted && selectedIds.length > 0 && (
               <button onClick={submitAnswer} style={{ marginTop: 16, height: 52, borderRadius: 10, border: "none", background: "linear-gradient(180deg,#0077FF,#005CC4)", color: "#fff", fontSize: 16, fontWeight: 700, cursor: "pointer", fontFamily: "Inter, sans-serif", boxShadow: "0 4px 16px rgba(0,119,255,0.35)" }}>
-                Отправить ответ
+                {currentQuestion.type === "SINGLE" ? "Подтвердить ответ" : "Отправить ответ"}
               </button>
             )}
             {submitted && (
@@ -402,103 +576,135 @@ export default function PlayPage() {
 
         {/* ══ REVEAL ══ */}
         {phase === "REVEAL" && currentQuestion && (
-          <>
-            <div style={{ position: "relative", zIndex: 1, flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 48 }}>
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", maxWidth: 640 }}>
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "24px 56px 36px" }}>
 
-                <div style={{
-                  width: 120, height: 120, borderRadius: "50%",
-                  background: isCorrect
-                    ? "linear-gradient(135deg,#4BB34B,#2E8B2E)"
-                    : isPartial
-                      ? "linear-gradient(135deg,#FFA000,#E67600)"
-                      : "linear-gradient(135deg,#E64646,#C03030)",
-                  display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 24,
-                }}>
-                  {isCorrect ? (
-                    <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                  ) : isPartial ? (
-                    /* half-check: one tick arm only */
-                    <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="20 6 9 17 4 12"/>
-                      <line x1="4" y1="6" x2="8" y2="10"/>
-                    </svg>
-                  ) : (
-                    <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                  )}
-                </div>
+            {/* Top bar — mirrors the question screen, but the right side shows the result */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+              <div style={{ display: "inline-flex", alignItems: "center", padding: "4px 12px", borderRadius: 999, background: "rgba(0,119,255,0.15)", border: "1px solid rgba(0,119,255,0.3)", fontSize: 13, fontWeight: 600, color: "#71AAEB" }}>
+                Вопрос {qIdx + 1} / {quiz.questions.length}
+              </div>
+              <div style={{
+                display: "inline-flex", alignItems: "center", padding: "4px 12px", borderRadius: 999,
+                fontSize: 13, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: "0.06em",
+                background: isCorrect ? "rgba(75,179,75,0.15)" : isPartial ? "rgba(255,160,0,0.15)" : "rgba(230,70,70,0.15)",
+                border: `1px solid ${isCorrect ? "rgba(75,179,75,0.4)" : isPartial ? "rgba(255,160,0,0.4)" : "rgba(230,70,70,0.4)"}`,
+                color: isCorrect ? "#4BB34B" : isPartial ? "#FFA000" : "#E64646",
+              }}>
+                {selectedIds.length === 0 ? "Время вышло" : isCorrect ? "Правильно" : isPartial ? "Частично верно" : "Неверно"}
+              </div>
+            </div>
 
-                <div style={{
-                  fontSize: 14,
-                  color: isCorrect ? "#4BB34B" : isPartial ? "#FFA000" : "#E64646",
-                  textTransform: "uppercase" as const, letterSpacing: "0.12em", fontWeight: 700, marginBottom: 8,
-                }}>
-                  {selectedIds.length === 0
-                    ? "Время вышло!"
-                    : isCorrect
-                      ? "Правильно!"
-                      : isPartial
-                        ? "Частично верно!"
-                        : "Неверно!"}
-                </div>
-
-                {(isCorrect || isPartial) && (
-                  <>
-                    <div style={{ fontSize: 56, fontWeight: 800, letterSpacing: "-0.03em", lineHeight: 1, marginBottom: 8 }}>
-                      <span style={{
-                        background: isCorrect
-                          ? "linear-gradient(135deg,#4BB34B,#0077FF)"
-                          : "linear-gradient(135deg,#FFA000,#E67600)",
-                        WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
-                      }}>
-                        +{roundPoints.toLocaleString()} очков
-                      </span>
-                    </div>
-                    <div style={{ fontSize: 14, color: "#909499", marginBottom: 28 }}>
-                      {isPartial
-                        ? `Верных: ${correctlySelectedCount}/${correctIds.length}${wronglySelectedCount > 0 ? ` · Лишних: ${wronglySelectedCount}` : ""}`
-                        : quiz.scoring === "speed"
-                          ? `С бонусом за скорость · из ${currentQuestion.points.toLocaleString()}`
-                          : quiz.scoring === "streak"
-                            ? `С множителем серии · базовые ${currentQuestion.points.toLocaleString()}`
-                            : `Базовые ${currentQuestion.points.toLocaleString()} очков`}
-                    </div>
-                  </>
-                )}
-                {!isCorrect && !isPartial && (
-                  <div style={{ fontSize: 14, color: "#76787A", marginBottom: 28 }}>
-                    {selectedIds.length === 0 ? "Не успели ответить вовремя" : "В следующий раз повезёт!"}
+            {/* Result strip — points earned + current rank (replaces the timer bar) */}
+            <div style={{ display: "flex", alignItems: "stretch", gap: 14, marginBottom: 28 }}>
+              <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 12, padding: "13px 20px", background: "#232324", border: "1px solid #363738", borderRadius: 12 }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={roundPoints > 0 ? (isCorrect ? "#4BB34B" : "#FFA000") : "#76787A"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                <div style={{ textAlign: "left" as const }}>
+                  <div style={{ fontSize: 11, color: "#76787A", textTransform: "uppercase" as const, letterSpacing: "0.05em", fontWeight: 600 }}>Очки за вопрос</div>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: roundPoints > 0 ? "#E7E8EA" : "#76787A" }}>
+                    {roundPoints > 0 ? `+${roundPoints.toLocaleString()}` : "0"}
+                    {isPartial && penaltyPoints > 0 && (
+                      <span style={{ fontSize: 13, fontWeight: 600, color: "#E64646", marginLeft: 8 }}>−{penaltyPoints} штраф</span>
+                    )}
                   </div>
-                )}
+                </div>
+              </div>
 
-                {myRank > 0 && players.length > 0 && (
-                  <div style={{ display: "flex", alignItems: "center", gap: 16, padding: "18px 28px", background: "#232324", border: "1px solid #363738", borderRadius: 16, marginBottom: 24 }}>
-                    <div style={{ width: 56, height: 56, borderRadius: 14, background: myRank <= 3 ? "linear-gradient(135deg,#FFA000,#E64646)" : "#2C2D2E", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: 26, fontWeight: 800, flexShrink: 0 }}>
-                      {myRank}
+              {myRank > 0 && players.length > 0 && (
+                <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 12, padding: "13px 20px", background: "#232324", border: "1px solid #363738", borderRadius: 12 }}>
+                  <div style={{ width: 40, height: 40, borderRadius: 10, background: myRank <= 3 ? "linear-gradient(135deg,#FFA000,#E64646)" : "#2C2D2E", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: 18, fontWeight: 800, flexShrink: 0 }}>
+                    {myRank}
+                  </div>
+                  <div style={{ textAlign: "left" as const }}>
+                    <div style={{ fontSize: 11, color: "#76787A", textTransform: "uppercase" as const, letterSpacing: "0.05em", fontWeight: 600 }}>Текущее место</div>
+                    <div style={{ fontSize: 22, fontWeight: 800 }}>
+                      {myRank} <span style={{ color: "#76787A", fontWeight: 400, fontSize: 15 }}>/ {players.length} · {myScore.toLocaleString()}</span>
                     </div>
-                    <div style={{ textAlign: "left" as const }}>
-                      <div style={{ fontSize: 12, color: "#76787A", textTransform: "uppercase" as const, letterSpacing: "0.05em", fontWeight: 600 }}>Текущее место</div>
-                      <div style={{ fontSize: 22, fontWeight: 700 }}>
-                        {myRank} <span style={{ color: "#76787A", fontWeight: 400 }}>/ {players.length}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Question card — identical to the question screen */}
+            {currentQuestion.imageUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={currentQuestion.imageUrl}
+                alt=""
+                style={{ display: "block", margin: "0 auto 16px", maxHeight: 260, maxWidth: "100%", borderRadius: 12, objectFit: "contain" }}
+              />
+            )}
+            <div style={{ background: "#232324", border: "1px solid #363738", borderRadius: 16, padding: "36px 44px", textAlign: "center", marginBottom: 24 }}>
+              <div style={{ fontSize: 36, fontWeight: 700, letterSpacing: "-0.02em", lineHeight: 1.2 }}>
+                {currentQuestion.text}
+              </div>
+            </div>
+
+            {/* Answer tiles — same colorful layout; correct answer highlighted, wrong picks dimmed */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, flex: 1, alignContent: "start" }}>
+              {currentQuestion.answers.map((ans, ai) => {
+                const isRight = correctIds.includes(ans.id);
+                const wasSelected = selectedIds.includes(ans.id);
+                const isWrongPick = wasSelected && !isRight;
+                return (
+                  <div key={ans.id} style={{
+                    position: "relative", overflow: "hidden",
+                    borderRadius: 12, minHeight: 80,
+                    padding: "22px 22px 22px 78px",
+                    display: "flex", alignItems: "center",
+                    fontSize: 18, fontWeight: 600, color: "white",
+                    border: isRight ? "2px solid #4BB34B" : isWrongPick ? "2px solid #E64646" : "1px solid rgba(255,255,255,0.08)",
+                    background: ANS_GRADIENTS[ai % 4],
+                    filter: isRight ? "none" : "grayscale(0.55) brightness(0.5)",
+                    boxShadow: isRight ? "0 0 0 3px rgba(75,179,75,0.45), 0 0 30px rgba(75,179,75,0.3)" : "none",
+                    transition: "filter 0.2s, box-shadow 0.2s",
+                  }}>
+                    <div style={{ position: "absolute", left: 18, top: "50%", transform: "translateY(-50%)", width: 44, height: 44, borderRadius: 10, background: "rgba(255,255,255,0.18)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 800 }}>
+                      {String.fromCharCode(65 + ai)}
+                    </div>
+                    <span>{ans.text}</span>
+                    {isRight && (
+                      <div style={{ position: "absolute", right: 18, top: "50%", transform: "translateY(-50%)", display: "flex", alignItems: "center", gap: 6, background: "white", color: "#2E8B2E", borderRadius: 999, padding: "4px 10px", fontSize: 11, fontWeight: 700, letterSpacing: "0.05em", whiteSpace: "nowrap" as const }}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#2E8B2E" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        {wasSelected ? "ВЫ УГАДАЛИ" : "ПРАВИЛЬНЫЙ"}
                       </div>
-                    </div>
-                    <div style={{ width: 1, height: 40, background: "#363738", margin: "0 8px" }} />
-                    <div style={{ textAlign: "left" as const }}>
-                      <div style={{ fontSize: 12, color: "#76787A", textTransform: "uppercase" as const, letterSpacing: "0.05em", fontWeight: 600 }}>Общий счёт</div>
-                      <div style={{ fontSize: 22, fontWeight: 700 }}>{myScore.toLocaleString()}</div>
-                    </div>
+                    )}
+                    {isWrongPick && (
+                      <div style={{ position: "absolute", right: 18, top: "50%", transform: "translateY(-50%)", display: "flex", alignItems: "center", gap: 6, background: "#E64646", color: "white", borderRadius: 999, padding: "4px 10px", fontSize: 11, fontWeight: 700, letterSpacing: "0.05em", whiteSpace: "nowrap" as const }}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                        ВАШ ВЫБОР
+                      </div>
+                    )}
                   </div>
-                )}
+                );
+              })}
+            </div>
 
-                <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 18px", background: "#2C2D2E", borderRadius: 999, fontSize: 14, color: "#909499" }}>
+            {/* Footer */}
+            <div style={{ marginTop: 16, display: "flex", justifyContent: "center" }}>
+              {isLastReveal ? (
+                <button
+                  onClick={() => setPhase("FINISHED")}
+                  style={{
+                    display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8,
+                    height: 52, padding: "0 32px", borderRadius: 10, border: "none",
+                    background: "linear-gradient(180deg,#0077FF,#005CC4)", color: "#fff",
+                    fontSize: 16, fontWeight: 700, cursor: "pointer", fontFamily: "Inter, sans-serif",
+                    boxShadow: "0 4px 16px rgba(0,119,255,0.35)",
+                  }}
+                >
+                  Перейти к результатам
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                </button>
+              ) : (
+                <div style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "10px 18px", background: "#2C2D2E", borderRadius: 999, fontSize: 14, color: "#909499" }}>
                   <div style={{ display: "flex", gap: 4 }}>
                     {[1, 0.7, 0.4].map((op, i) => <div key={i} style={{ width: 6, height: 6, borderRadius: "50%", background: "#76787A", opacity: op }} />)}
                   </div>
                   Следующий вопрос скоро…
                 </div>
-              </div>
+              )}
             </div>
-          </>
+          </div>
         )}
 
         {/* ══ FINISHED ══ */}
@@ -544,7 +750,7 @@ export default function PlayPage() {
                     <>
                       <div style={{ fontSize: 17, color: "#909499", marginBottom: 32 }}>
                         Вы набрали{" "}
-                        <span style={{ color: "#E7E8EA", fontWeight: 700 }}>{myScore.toLocaleString()} очков</span>
+                        <span style={{ color: "#E7E8EA", fontWeight: 700 }}>{myScore.toLocaleString()} {plural(myScore, ["очко", "очка", "очков"])}</span>
                         {topPct !== null && (
                           <span style={{ color: "#76787A" }}> — топ {topPct}%</span>
                         )}

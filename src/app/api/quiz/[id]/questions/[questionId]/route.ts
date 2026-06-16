@@ -23,7 +23,7 @@ export async function PUT(req: Request, { params }: Params) {
     data: {
       text: text ?? undefined,
       type: type ?? undefined,
-      imageUrl: imageUrl ?? undefined,
+      imageUrl: imageUrl !== undefined ? imageUrl : undefined,
       tags: Array.isArray(tags) ? tags : undefined,
       timeLimit: timeLimit ?? undefined,
       points: points ?? undefined,

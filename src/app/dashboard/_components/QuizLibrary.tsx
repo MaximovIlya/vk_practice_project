@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { plural } from "@/lib/plural";
 
 export type LibraryQuiz = {
   id: string;
@@ -11,7 +12,16 @@ export type LibraryQuiz = {
   questionCount: number;
   totalPlays: number;
   archived: boolean;
+  difficulty: string;
+  tags: string[];
+  coverImageUrl: string | null;
   lastRun: string | null;
+};
+
+const DIFFICULTY_COLORS: Record<string, string> = {
+  "Легко":  "#4BB34B",
+  "Средне": "#FFA000",
+  "Сложно": "#E64646",
 };
 
 const CATEGORY_GRADIENTS: Record<string, string> = {
@@ -179,17 +189,33 @@ export default function QuizLibrary({ quizzes, showSearch = false, autoFocusSear
         ) : (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "15px" }}>
             {filtered.map((quiz) => (
-              <div key={quiz.id} style={{
-                background: "#232324",
-                border: "1px solid #363738",
-                borderRadius: "12px",
-                overflow: "hidden",
-                boxShadow: "0 8px 24px rgba(0,0,0,0.3), inset 0 1px 0 1px rgba(255,255,255,0.04)",
-                opacity: quiz.archived ? 0.7 : 1,
-              }}>
+              <div key={quiz.id}
+                onClick={() => router.push(`/quiz/${quiz.id}/history`)}
+                title="Открыть историю игр"
+                style={{
+                  background: "#232324",
+                  border: "1px solid #363738",
+                  borderRadius: "12px",
+                  overflow: "hidden",
+                  boxShadow: "0 8px 24px rgba(0,0,0,0.3), inset 0 1px 0 1px rgba(255,255,255,0.04)",
+                  opacity: quiz.archived ? 0.7 : 1,
+                  cursor: "pointer",
+                }}>
                 {/* Card image header */}
                 <div style={{ height: "120px", background: categoryGradient(quiz.category), position: "relative", overflow: "hidden" }}>
-                  <div style={{ position: "absolute", width: "140px", height: "140px", borderRadius: "50%", background: "rgba(255,255,255,0.18)", top: "10px", right: "-14px" }} />
+                  {quiz.coverImageUrl ? (
+                    <>
+                      {/* Blurred backdrop fills the frame so any aspect ratio looks clean */}
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={quiz.coverImageUrl} alt="" aria-hidden style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", filter: "blur(20px)", transform: "scale(1.2)" }} />
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={quiz.coverImageUrl} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "contain" }} />
+                      {/* Dark gradient so the white badges/counters stay readable over any image */}
+                      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0) 35%, rgba(0,0,0,0.55) 100%)" }} />
+                    </>
+                  ) : (
+                    <div style={{ position: "absolute", width: "140px", height: "140px", borderRadius: "50%", background: "rgba(255,255,255,0.18)", top: "10px", right: "-14px" }} />
+                  )}
                   <div style={{ position: "absolute", top: "16px", left: "16px", padding: "3.5px 10px", borderRadius: "999px", background: "rgba(0,0,0,0.3)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)" }}>
                     <span style={{ fontSize: "12px", fontWeight: 600, letterSpacing: "0.02em", textTransform: "uppercase", color: "#fff" }}>
                       {categoryLabel(quiz.category)}
@@ -201,9 +227,9 @@ export default function QuizLibrary({ quizzes, showSearch = false, autoFocusSear
                     </div>
                   )}
                   <div style={{ position: "absolute", bottom: "0", left: "16px", display: "flex", gap: "14px", alignItems: "center", paddingBottom: "10px" }}>
-                    <span style={{ fontSize: "13px", fontWeight: 600, color: "#fff" }}>{quiz.questionCount} вопросов</span>
+                    <span style={{ fontSize: "13px", fontWeight: 600, color: "#fff" }}>{quiz.questionCount} {plural(quiz.questionCount, ["вопрос", "вопроса", "вопросов"])}</span>
                     <span style={{ fontSize: "13px", fontWeight: 600, color: "rgba(255,255,255,0.6)" }}>·</span>
-                    <span style={{ fontSize: "13px", fontWeight: 600, color: "#fff" }}>{quiz.totalPlays.toLocaleString()} игр</span>
+                    <span style={{ fontSize: "13px", fontWeight: 600, color: "#fff" }}>{quiz.totalPlays.toLocaleString()} {plural(quiz.totalPlays, ["игра", "игры", "игр"])}</span>
                   </div>
                 </div>
 
@@ -212,14 +238,28 @@ export default function QuizLibrary({ quizzes, showSearch = false, autoFocusSear
                   <p style={{ fontSize: "16px", fontWeight: 600, color: "#E7E8EA", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {quiz.title}
                   </p>
-                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#76787A" strokeWidth="2" strokeLinecap="round">
-                      <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
-                    </svg>
-                    <span style={{ fontSize: "13px", color: "#76787A" }}>{quiz.lastRun ? timeAgo(quiz.lastRun) : "Черновик"}</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#76787A" strokeWidth="2" strokeLinecap="round">
+                        <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
+                      </svg>
+                      <span style={{ fontSize: "13px", color: "#76787A" }}>{quiz.lastRun ? timeAgo(quiz.lastRun) : "Черновик"}</span>
+                    </div>
+                    {quiz.difficulty && (() => {
+                      const color = DIFFICULTY_COLORS[quiz.difficulty] ?? "#76787A";
+                      return (
+                        <>
+                          <span style={{ color: "#363738" }}>·</span>
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                            <span style={{ width: 6, height: 6, borderRadius: "50%", background: color }} />
+                            <span style={{ fontSize: "13px", color }}>{quiz.difficulty}</span>
+                          </span>
+                        </>
+                      );
+                    })()}
                   </div>
 
-                  <div style={{ display: "flex", gap: "6px", paddingTop: "12.7px" }}>
+                  <div onClick={(e) => e.stopPropagation()} style={{ display: "flex", gap: "6px", paddingTop: "12.7px" }}>
                     {quiz.archived ? (
                       <button
                         onClick={() => handleArchive(quiz.id, false)}

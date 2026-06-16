@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { plural } from "@/lib/plural";
 
 type Player = { rank: number; userId: string; name: string; score: number; correct: number; total: number };
 type ResultsData = {
@@ -109,7 +110,7 @@ export default function ResultsPage() {
             <span>·</span>
             <span>Проведён {formatDate(data.startedAt)}</span>
             <span>·</span>
-            <span style={{ fontVariantNumeric: "tabular-nums" }}>{data.playerCount} игроков</span>
+            <span style={{ fontVariantNumeric: "tabular-nums" }}>{data.playerCount} {plural(data.playerCount, ["игрок", "игрока", "игроков"])}</span>
           </div>
           <div style={{ fontSize: 34, fontWeight: 800, letterSpacing: "-0.02em", display: "flex", alignItems: "center", gap: 10 }}>
             Итоговые результаты
@@ -118,8 +119,8 @@ export default function ResultsPage() {
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           <button style={{ display: "flex", alignItems: "center", gap: 6, height: 40, padding: "0 16px", borderRadius: 8, border: "none", background: "transparent", color: "#909499", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            Экспорт CSV
+            {/* <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> */}
+            {/* Экспорт CSV */}
           </button>
           {auth?.user?.role !== "PARTICIPANT" && data && (
             <button onClick={() => router.push(`/quiz/${data.quizId}/run?reset=1`)} style={{ display: "flex", alignItems: "center", gap: 6, height: 40, padding: "0 16px", borderRadius: 8, border: "1px solid #363738", background: "#2C2D2E", color: "#E7E8EA", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>
@@ -199,7 +200,7 @@ export default function ResultsPage() {
             <div style={{ fontSize: 12, color: "#76787A", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600 }}>Полная таблица</div>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#76787A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-              <span style={{ fontSize: 12, color: "#76787A", fontVariantNumeric: "tabular-nums" }}>{data.playerCount} игроков</span>
+              <span style={{ fontSize: 12, color: "#76787A", fontVariantNumeric: "tabular-nums" }}>{data.playerCount} {plural(data.playerCount, ["игрок", "игрока", "игроков"])}</span>
             </div>
           </div>
 

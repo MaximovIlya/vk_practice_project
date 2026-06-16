@@ -9,7 +9,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { title, description, category, timePerQuestion, pointsPerQuestion, scoring } = await req.json();
+  const { title, description, category, timePerQuestion, pointsPerQuestion, scoring, difficulty, tags, coverImageUrl } = await req.json();
 
   if (!title?.trim()) {
     return NextResponse.json({ error: "Title is required" }, { status: 400 });
@@ -17,6 +17,9 @@ export async function POST(req: Request) {
 
   const SCORING_MODES = ["standard", "speed", "streak"];
   const scoringMode = SCORING_MODES.includes(scoring) ? scoring : "standard";
+
+  const DIFFICULTIES = ["Легко", "Средне", "Сложно"];
+  const difficultyValue = DIFFICULTIES.includes(difficulty) ? difficulty : "Средне";
 
   const quiz = await prisma.quiz.create({
     data: {
@@ -26,6 +29,9 @@ export async function POST(req: Request) {
       timePerQuestion: timePerQuestion ?? 30,
       pointsPerQuestion: pointsPerQuestion ?? 1000,
       scoring: scoringMode,
+      difficulty: difficultyValue,
+      tags: Array.isArray(tags) ? tags.filter((t: unknown): t is string => typeof t === "string") : [],
+      coverImageUrl: typeof coverImageUrl === "string" && coverImageUrl ? coverImageUrl : null,
       authorId: session.user.id,
     },
   });

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 
@@ -36,6 +37,9 @@ export default function EditQuestionsPage() {
   const [selectedIdx, setSelectedIdx] = useState(0);
   const [saving, setSaving] = useState(false);
   const [savedSec, setSavedSec] = useState<number | null>(null);
+  const [imageUploading, setImageUploading] = useState(false);
+  const [imageDragOver, setImageDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -73,6 +77,17 @@ export default function EditQuestionsPage() {
     const questions = quiz.questions.map((q, i) => (i === selectedIdx ? updated : q));
     setQuiz({ ...quiz, questions });
     autoSave(updated);
+  }
+
+  async function handleImageUpload(file: File) {
+    if (!selectedQuestion) return;
+    setImageUploading(true);
+    const form = new FormData();
+    form.append("file", file);
+    const res = await fetch("/api/upload", { method: "POST", body: form });
+    const data = await res.json();
+    setImageUploading(false);
+    if (data.url) updateQuestion({ imageUrl: data.url });
   }
 
   function updateAnswer(idx: number, patch: Partial<Answer>) {
@@ -203,21 +218,21 @@ export default function EditQuestionsPage() {
 
         {/* Right: action buttons */}
         <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>
-          <button style={{
+          {/* <button style={{
             display: "flex", alignItems: "center", gap: 6,
             padding: "7px 14px", borderRadius: 8,
             border: "1px solid #363738", background: "transparent",
             color: "#909499", fontSize: 13, cursor: "pointer",
             fontFamily: "Inter, sans-serif",
           }}>
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            {/* <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
               <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.4" />
               <circle cx="7" cy="7" r="2" stroke="currentColor" strokeWidth="1.4" />
             </svg>
-            Предпросмотр
-          </button>
+            Предпросмотр */}
+          {/* </div></button> */} 
           <button
-            onClick={() => router.push(`/quiz/${quiz.id}/run?reset=1`)}
+            onClick={() => router.push(`/quiz/${quiz.id}/review`)}
             style={{
               display: "flex", alignItems: "center", gap: 6,
               padding: "7px 16px", borderRadius: 8, border: "none",
@@ -228,9 +243,9 @@ export default function EditQuestionsPage() {
             }}
           >
             <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-              <path d="M3 2l8 4.5L3 11V2z" fill="currentColor" />
+              <path d="M9 2L5.5 5.5 9 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" transform="rotate(180 6.5 5.5)"/>
             </svg>
-            Запустить квиз
+            Продолжить
           </button>
         </div>
       </header>
@@ -273,7 +288,10 @@ export default function EditQuestionsPage() {
         <div style={{ width: 56, height: 2, background: "#363738", margin: "0 14px" }} />
 
         {/* Step 3 — review & publish */}
-        <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+        <Link
+          href={`/quiz/${quiz.id}/review`}
+          style={{ display: "flex", alignItems: "center", gap: 9, textDecoration: "none" }}
+        >
           <div style={{
             width: 26, height: 26, borderRadius: "50%", flexShrink: 0,
             background: "#2C2D2E", border: "1px solid #363738",
@@ -281,7 +299,7 @@ export default function EditQuestionsPage() {
             fontSize: 12, fontWeight: 700, color: "#76787A",
           }}>3</div>
           <span style={{ fontSize: 13, fontWeight: 600, color: "#76787A" }}>Проверка и публикация</span>
-        </div>
+        </Link>
       </div>
 
       {/* ── Body ── */}
@@ -475,24 +493,109 @@ export default function EditQuestionsPage() {
                 <label style={{ display: "block", color: "#909499", fontSize: 12, fontWeight: 600, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>
                   Изображение <span style={{ color: "#76787A", fontWeight: 400, textTransform: "none" }}>(необязательно)</span>
                 </label>
-                <div style={{
-                  border: "1.5px dashed #363738", borderRadius: 10,
-                  padding: "20px", textAlign: "center",
-                  background: "rgba(35,35,36,0.4)", cursor: "pointer",
-                }}
-                  onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(0,119,255,0.5)"; }}
-                  onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#363738"; }}
-                >
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" style={{ display: "block", margin: "0 auto 6px" }}>
-                    <rect x="2" y="5" width="20" height="16" rx="2.5" stroke="#76787A" strokeWidth="1.4" />
-                    <circle cx="8" cy="10.5" r="1.8" stroke="#76787A" strokeWidth="1.4" />
-                    <path d="M2 17l5-4.5 4 3.5 4-3 5 4" stroke="#76787A" strokeWidth="1.4" strokeLinejoin="round" />
-                  </svg>
-                  <span style={{ color: "#76787A", fontSize: 12 }}>
-                    Перетащите изображение или{" "}
-                    <span style={{ color: "#0077FF", textDecoration: "underline", cursor: "pointer" }}>выберите файл</span>
-                  </span>
-                </div>
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/gif,image/webp"
+                  style={{ display: "none" }}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleImageUpload(file);
+                    e.target.value = "";
+                  }}
+                />
+
+                {selectedQuestion.imageUrl ? (
+                  <div style={{ position: "relative", borderRadius: 10, overflow: "hidden", border: "1px solid #363738", background: "#1A1A1B" }}>
+                    <Image
+                      src={selectedQuestion.imageUrl}
+                      alt="Изображение вопроса"
+                      width={640}
+                      height={360}
+                      style={{ width: "100%", height: 320, objectFit: "contain", display: "block" }}
+                    />
+                    <div style={{
+                      position: "absolute", top: 8, right: 8, display: "flex", gap: 6,
+                    }}>
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        style={{
+                          display: "flex", alignItems: "center", gap: 5,
+                          padding: "5px 10px", borderRadius: 6,
+                          background: "rgba(25,25,26,0.85)", border: "1px solid #363738",
+                          color: "#E7E8EA", fontSize: 11, fontWeight: 600, cursor: "pointer",
+                          fontFamily: "Inter, sans-serif", backdropFilter: "blur(6px)",
+                        }}
+                      >
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                          <path d="M1 9.5V11h1.5l4.44-4.44-1.5-1.5L1 9.5zm7.07-4.07a.4.4 0 0 0 0-.57L6.64 3.43a.4.4 0 0 0-.57 0l-.93.93 2.07 2.07.86-.86z" fill="currentColor" />
+                        </svg>
+                        Заменить
+                      </button>
+                      <button
+                        onClick={() => updateQuestion({ imageUrl: null })}
+                        style={{
+                          display: "flex", alignItems: "center", gap: 5,
+                          padding: "5px 10px", borderRadius: 6,
+                          background: "rgba(230,70,70,0.15)", border: "1px solid rgba(230,70,70,0.3)",
+                          color: "#E64646", fontSize: 11, fontWeight: 600, cursor: "pointer",
+                          fontFamily: "Inter, sans-serif", backdropFilter: "blur(6px)",
+                        }}
+                      >
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                          <path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                        </svg>
+                        Удалить
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    onClick={() => !imageUploading && fileInputRef.current?.click()}
+                    onDragOver={(e) => { e.preventDefault(); setImageDragOver(true); }}
+                    onDragLeave={() => setImageDragOver(false)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setImageDragOver(false);
+                      const file = e.dataTransfer.files[0];
+                      if (file) handleImageUpload(file);
+                    }}
+                    style={{
+                      border: `1.5px dashed ${imageDragOver ? "rgba(0,119,255,0.7)" : "#363738"}`,
+                      borderRadius: 10, padding: "28px 20px", textAlign: "center",
+                      background: imageDragOver ? "rgba(0,119,255,0.06)" : "rgba(35,35,36,0.4)",
+                      cursor: imageUploading ? "default" : "pointer",
+                      transition: "border-color 0.15s, background 0.15s",
+                    }}
+                    onMouseEnter={(e) => { if (!imageDragOver) (e.currentTarget as HTMLElement).style.borderColor = "rgba(0,119,255,0.5)"; }}
+                    onMouseLeave={(e) => { if (!imageDragOver) (e.currentTarget as HTMLElement).style.borderColor = "#363738"; }}
+                  >
+                    {imageUploading ? (
+                      <>
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" style={{ display: "block", margin: "0 auto 8px", opacity: 0.5 }}>
+                          <circle cx="12" cy="12" r="9" stroke="#0077FF" strokeWidth="2" strokeDasharray="40 16" strokeLinecap="round">
+                            <animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="0.8s" repeatCount="indefinite" />
+                          </circle>
+                        </svg>
+                        <span style={{ color: "#76787A", fontSize: 12 }}>Загружаем…</span>
+                      </>
+                    ) : (
+                      <>
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" style={{ display: "block", margin: "0 auto 8px" }}>
+                          <rect x="2" y="5" width="20" height="16" rx="2.5" stroke="#76787A" strokeWidth="1.4" />
+                          <circle cx="8" cy="10.5" r="1.8" stroke="#76787A" strokeWidth="1.4" />
+                          <path d="M2 17l5-4.5 4 3.5 4-3 5 4" stroke="#76787A" strokeWidth="1.4" strokeLinejoin="round" />
+                        </svg>
+                        <span style={{ color: "#76787A", fontSize: 12 }}>
+                          Перетащите изображение или{" "}
+                          <span style={{ color: "#0077FF", textDecoration: "underline" }}>выберите файл</span>
+                        </span>
+                        <div style={{ color: "#4A4B4D", fontSize: 11, marginTop: 4 }}>JPG, PNG, GIF, WEBP · до 5 МБ</div>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Answer options */}
@@ -638,22 +741,6 @@ export default function EditQuestionsPage() {
             onChange={(v) => updateQuestion({ points: v })}
           />
 
-          <div style={{ height: 1, background: "#363738", margin: "14px 0" }} />
-
-          <div style={{ color: "#909499", fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
-            Сложность
-          </div>
-          <DifficultyPicker />
-
-          <div style={{ height: 1, background: "#363738", margin: "14px 0" }} />
-
-          <div style={{ color: "#909499", fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
-            Теги
-          </div>
-          <TagsEditor
-            tags={selectedQuestion.tags}
-            onChange={(tags) => updateQuestion({ tags })}
-          />
         </>)}
         </aside>
 
@@ -692,112 +779,3 @@ function QuizSettingSelect({
   );
 }
 
-function TagsEditor({ tags, onChange }: { tags: string[]; onChange: (tags: string[]) => void }) {
-  const [adding, setAdding] = useState(false);
-  const [input, setInput] = useState("");
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  function startAdding() {
-    setAdding(true);
-    setTimeout(() => inputRef.current?.focus(), 0);
-  }
-
-  function commit() {
-    const val = input.trim().toLowerCase().replace(/\s+/g, "-");
-    if (val && !tags.includes(val)) {
-      onChange([...tags, val]);
-    }
-    setInput("");
-    setAdding(false);
-  }
-
-  function onKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "Enter") { e.preventDefault(); commit(); }
-    if (e.key === "Escape") { setInput(""); setAdding(false); }
-  }
-
-  function removeTag(tag: string) {
-    onChange(tags.filter((t) => t !== tag));
-  }
-
-  return (
-    <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
-      {tags.map((tag) => (
-        <span key={tag} style={{
-          display: "flex", alignItems: "center", gap: 4,
-          padding: "3px 7px 3px 8px", borderRadius: 999,
-          background: "rgba(0,119,255,0.1)", border: "1px solid rgba(0,119,255,0.25)",
-          color: "#71AAEB", fontSize: 11,
-        }}>
-          {tag}
-          <button
-            onClick={() => removeTag(tag)}
-            style={{
-              background: "none", border: "none", cursor: "pointer",
-              color: "#0077FF", fontSize: 13, lineHeight: 1, padding: 0,
-              display: "flex", alignItems: "center",
-            }}
-          >
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-              <path d="M2 2l6 6M8 2l-6 6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-            </svg>
-          </button>
-        </span>
-      ))}
-
-      {adding ? (
-        <input
-          ref={inputRef}
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={onKeyDown}
-          onBlur={commit}
-          placeholder="тег…"
-          style={{
-            width: 80, padding: "3px 8px", borderRadius: 999,
-            background: "rgba(0,119,255,0.08)", border: "1px solid rgba(0,119,255,0.4)",
-            color: "#E7E8EA", fontSize: 11, fontFamily: "Inter, sans-serif", outline: "none",
-          }}
-        />
-      ) : (
-        <button
-          onClick={startAdding}
-          style={{
-            padding: "3px 8px", borderRadius: 999,
-            background: "transparent", border: "1px dashed #363738",
-            color: "#76787A", fontSize: 11, cursor: "pointer",
-            fontFamily: "Inter, sans-serif",
-          }}
-        >+ добавить</button>
-      )}
-    </div>
-  );
-}
-
-function DifficultyPicker() {
-  const [d, setD] = useState<"Лёгко" | "Средне" | "Сложно">("Средне");
-  const opts = [
-    { label: "Лёгко",  color: "#4BB34B" },
-    { label: "Средне", color: "#FFA000" },
-    { label: "Сложно", color: "#E64646" },
-  ] as const;
-  return (
-    <div style={{ display: "flex", gap: 5 }}>
-      {opts.map(({ label, color }) => (
-        <button
-          key={label}
-          onClick={() => setD(label)}
-          style={{
-            flex: 1, padding: "6px 0", borderRadius: 6, border: "none", cursor: "pointer", fontSize: 11, fontWeight: 600,
-            background: d === label ? `${color}22` : "rgba(44,45,46,0.5)",
-            color: d === label ? color : "#76787A",
-            outline: d === label ? `1px solid ${color}55` : "none",
-            fontFamily: "Inter, sans-serif",
-          }}
-        >
-          {label}
-        </button>
-      ))}
-    </div>
-  );
-}

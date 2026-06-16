@@ -5,9 +5,10 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { getSocket, disconnectSocket } from "@/lib/socket";
 import type { Player, AnswerVotes } from "@/types/socket";
+import { plural } from "@/lib/plural";
 
 type Answer = { id: string; text: string; isCorrect: boolean };
-type Question = { id: string; text: string; type: string; timeLimit: number; points: number; answers: Answer[]; order: number };
+type Question = { id: string; text: string; type: string; timeLimit: number; points: number; answers: Answer[]; order: number; imageUrl?: string | null };
 type Quiz = { id: string; title: string; questions: Question[] };
 type QuizSession = { id: string; roomCode: string; status: string };
 
@@ -50,6 +51,7 @@ export default function RunQuizPage() {
   const [timeLeft,    setTimeLeft]    = useState(0);
   const [copied,      setCopied]      = useState(false);
   const [revealSecs,  setRevealSecs]  = useState(5);
+  const [isLastReveal, setIsLastReveal] = useState(false);
   const timerRef       = useRef<ReturnType<typeof setInterval> | null>(null);
   const revealTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const sessionInitRef = useRef(false);
@@ -135,12 +137,19 @@ export default function RunQuizPage() {
       timerRef.current = setInterval(tick, 250);
     });
     socket.on("answer-received", ({ votes: v, totalAnswered: t }) => { setVotes(v); setTotalAnswered(t); });
-    socket.on("question-ended", ({ correctAnswerIds, votes: v, questionIndex }) => {
+    socket.on("question-ended", ({ correctAnswerIds, votes: v, questionIndex, isLast }) => {
       if (questionIndex !== undefined) setQIdx(questionIndex);
       setPhase("REVEAL");
+      setIsLastReveal(!!isLast);
       setCorrectIds(correctAnswerIds);
       setVotes(v);
       if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+      // The final question doesn't auto-advance — the organizer presses a button
+      // to move on to the results, so skip the countdown timer in that case.
+      if (isLast) {
+        if (revealTimerRef.current) { clearInterval(revealTimerRef.current); revealTimerRef.current = null; }
+        return;
+      }
       // Countdown until auto-advance
       setRevealSecs(5);
       if (revealTimerRef.current) clearInterval(revealTimerRef.current);
@@ -186,6 +195,13 @@ export default function RunQuizPage() {
     getSocket().emit("end-question", { sessionId: quizSession.id });
   }, [quizSession]);
 
+  // After the final question's reveal: tell the server to finish the quiz. The
+  // server responds with `quiz-finished`, whose handler redirects to /results.
+  const goToResults = useCallback(() => {
+    if (!quizSession) return;
+    getSocket().emit("next-question", { sessionId: quizSession.id });
+  }, [quizSession]);
+
   const endSession = useCallback(async () => {
     await fetch(`/api/quiz/${params.id}/session`, { method: "DELETE" });
     disconnectSocket();
@@ -227,53 +243,64 @@ export default function RunQuizPage() {
         borderBottom: "1px solid #363738",
         position: "relative", zIndex: 5,
       }}>
-        {/* Left */}
-        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+        {/* Left: Pulse logo + quiz title */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div style={{ width: 28, height: 28, borderRadius: 8, background: "linear-gradient(180deg,#0077FF,#005CC4)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
             <svg width="16" height="11" viewBox="8 11 20 14" fill="none">
               <path d="M10.5825 18H13.0552L14.7036 13.055L18 22.946L19.649 18H25.418" stroke="white" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </div>
-          {(phase === "ACTIVE" || phase === "REVEAL") ? (
-            <>
-              <div style={{ display: "inline-flex", alignItems: "center", padding: "4px 10px", borderRadius: 999, background: "rgba(0,119,255,0.15)", border: "1px solid rgba(0,119,255,0.3)", fontSize: 13, fontWeight: 600, color: "#71AAEB", fontVariantNumeric: "tabular-nums" }}>
-                В {qIdx + 1} / {quiz.questions.length}
-              </div>
-              <span style={{ fontSize: 14, color: "#909499" }}>{quiz.title}</span>
-            </>
-          ) : (
-            <>
-              <div style={{ width: 1, height: 20, background: "#363738" }} />
-              <span style={{ fontSize: 14, color: "#909499" }}>
-                Ведёт · <span style={{ color: "#E7E8EA", fontWeight: 500 }}>{quiz.title}</span>
-              </span>
-            </>
-          )}
+          <span style={{ fontWeight: 800, fontSize: 20, letterSpacing: "-0.02em" }}>Pulse</span>
+          <div style={{ width: 1, height: 20, background: "#363738", marginLeft: 4 }} />
+          <span style={{ fontSize: 14, color: "#909499" }}>{quiz.title}</span>
         </div>
 
         {/* Right */}
-        {phase === "ACTIVE" && (
-          <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "#909499" }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-            <span style={{ fontVariantNumeric: "tabular-nums" }}>{totalAnswered} / {players.length} ответили</span>
-          </div>
-        )}
-        {phase === "REVEAL" && (
-          <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#909499" }}>
-            <div style={{ display: "flex", gap: 3 }}>
-              {[1, 0.6, 0.3].map((op, i) => <div key={i} style={{ width: 5, height: 5, borderRadius: "50%", background: "#76787A", opacity: op }} />)}
-            </div>
-            {revealSecs > 0
-              ? `Следующий вопрос через ${revealSecs} сек`
-              : "Переходим к следующему…"}
-          </div>
-        )}
         {phase === "WAITING" && (
           <button onClick={endSession} style={{ height: 32, padding: "0 12px", borderRadius: 6, border: "none", background: "transparent", color: "#909499", fontSize: 13, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>
             Завершить сессию
           </button>
         )}
       </header>
+
+      {/* ── Question progress bar (ACTIVE / REVEAL only) ── */}
+      {(phase === "ACTIVE" || phase === "REVEAL") && (
+        <div style={{ flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 32px", borderBottom: "1px solid #363738", background: "#19191A" }}>
+          <div style={{ display: "inline-flex", alignItems: "center", padding: "4px 12px", borderRadius: 999, background: "rgba(0,119,255,0.15)", border: "1px solid rgba(0,119,255,0.3)", fontSize: 13, fontWeight: 600, color: "#71AAEB", fontVariantNumeric: "tabular-nums" }}>
+            Вопрос {qIdx + 1} / {quiz.questions.length}
+          </div>
+          {phase === "REVEAL" && (
+            isLastReveal ? (
+              <button
+                onClick={goToResults}
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: 8,
+                  height: 34, padding: "0 18px", borderRadius: 8, border: "none",
+                  background: "linear-gradient(180deg,#0077FF,#005CC4)", color: "#fff",
+                  fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "Inter, sans-serif",
+                  boxShadow: "0 4px 16px rgba(0,119,255,0.35)",
+                }}
+              >
+                Перейти к результатам
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+              </button>
+            ) : (
+              <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#909499" }}>
+                <div style={{ display: "flex", gap: 3 }}>
+                  {[1, 0.6, 0.3].map((op, i) => <div key={i} style={{ width: 5, height: 5, borderRadius: "50%", background: "#76787A", opacity: op }} />)}
+                </div>
+                {revealSecs > 0 ? `Следующий вопрос через ${revealSecs} сек` : "Переходим к следующему…"}
+              </div>
+            )
+          )}
+          {phase === "ACTIVE" && (
+            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "#909499" }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              <span style={{ fontVariantNumeric: "tabular-nums" }}>{totalAnswered} / {players.length} ответили</span>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── Body ── */}
       <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
@@ -362,7 +389,7 @@ export default function RunQuizPage() {
                   }}
                 >
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                  Начать квиз ({players.length} {players.length === 1 ? "игрок" : players.length <= 4 ? "игрока" : "игроков"})
+                  Начать квиз ({players.length} {plural(players.length, ["игрок", "игрока", "игроков"])})
                 </button>
 
                 <div style={{ display: "flex", alignItems: "center", gap: 6, color: "#76787A", fontSize: 13, marginTop: 10 }}>
@@ -459,10 +486,20 @@ export default function RunQuizPage() {
                       </div>
                     )}
                     <div style={{ fontSize: 12, color: "#76787A", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600, marginBottom: 12 }}>
-                      {currentQuestion.type === "SINGLE" ? "Один ответ" : "Несколько ответов"} · {currentQuestion.points.toLocaleString()} очков
+                      {currentQuestion.type === "SINGLE" ? "Один ответ" : "Несколько ответов"} · {currentQuestion.points.toLocaleString()} {plural(currentQuestion.points, ["очко", "очка", "очков"])}
                     </div>
-                    <div style={{ fontSize: 44, fontWeight: 700, letterSpacing: "-0.02em", lineHeight: 1.15, maxWidth: 800 }}>
-                      {currentQuestion.text}
+                    {currentQuestion.imageUrl && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={currentQuestion.imageUrl}
+                        alt=""
+                        style={{ display: "block", margin: "0 auto 16px", maxHeight: 280, maxWidth: "100%", borderRadius: 12, objectFit: "contain" }}
+                      />
+                    )}
+                    <div style={{ background: "#232324", border: "1px solid #363738", borderRadius: 16, padding: "28px 44px" }}>
+                      <div style={{ fontSize: 44, fontWeight: 700, letterSpacing: "-0.02em", lineHeight: 1.15 }}>
+                        {currentQuestion.text}
+                      </div>
                     </div>
                   </div>
 

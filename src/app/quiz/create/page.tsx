@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
@@ -26,6 +26,12 @@ const SCORING_OPTIONS = [
   { id: "speed",     label: "Бонус за скорость", desc: "Быстрые ответы дают больше" },
   { id: "streak",    label: "Серия",             desc: "Множитель комбо" },
 ];
+
+const DIFFICULTY_OPTIONS = [
+  { label: "Легко",  color: "#4BB34B" },
+  { label: "Средне", color: "#FFA000" },
+  { label: "Сложно", color: "#E64646" },
+] as const;
 
 const CATEGORY_GRADIENTS: Record<string, string> = {
   Engineering:    "linear-gradient(165deg, #E64646 0%, rgba(230,70,70,0.6) 100%)",
@@ -70,8 +76,14 @@ function CreateQuizPageInner() {
   const [category, setCategory] = useState("Engineering");
   const [visibility, setVisibility] = useState("Private · invite only");
   const [scoring, setScoring] = useState("standard");
+  const [difficulty, setDifficulty] = useState("Средне");
+  const [tags, setTags] = useState<string[]>([]);
+  const [coverImageUrl, setCoverImageUrl] = useState<string | null>(null);
+  const [coverUploading, setCoverUploading] = useState(false);
+  const [coverDragOver, setCoverDragOver] = useState(false);
   const [saving, setSaving] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const coverInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!editId) return;
@@ -83,8 +95,24 @@ function CreateQuizPageInner() {
         setDescription(q.description ?? "");
         setCategory(q.category ?? "Engineering");
         setScoring(q.scoring ?? "standard");
+        setDifficulty(q.difficulty ?? "Средне");
+        setTags(Array.isArray(q.tags) ? q.tags : []);
+        setCoverImageUrl(q.coverImageUrl ?? null);
       });
   }, [editId]);
+
+  async function handleCoverUpload(file: File) {
+    setCoverUploading(true);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const res = await fetch("/api/upload", { method: "POST", body: form });
+      const data = await res.json();
+      if (data.url) setCoverImageUrl(data.url);
+    } finally {
+      setCoverUploading(false);
+    }
+  }
 
   const userName = session?.user?.name ?? "Вы";
   const initials = getInitials(userName);
@@ -96,7 +124,7 @@ function CreateQuizPageInner() {
       const res = await fetch(editId ? `/api/quiz/${editId}` : "/api/quiz", {
         method: editId ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, description, category, scoring }),
+        body: JSON.stringify({ title, description, category, scoring, difficulty, tags, coverImageUrl }),
       });
       if (!res.ok) throw new Error("Failed");
       const quiz = await res.json();
@@ -136,7 +164,7 @@ function CreateQuizPageInner() {
             <span style={{ fontWeight: 800, fontSize: "20px", letterSpacing: "-0.02em" }}>Pulse</span>
           </div>
           <div style={{ display: "flex", gap: "4px" }}>
-            {(["Главная", "Мои квизы", "Аналитика"] as const).map((label) => (
+            {(["Главная", "Мои квизы"] as const).map((label) => (
               <Link key={label} href={label === "Главная" ? "/dashboard" : "#"} style={{
                 fontSize: "14px", fontWeight: 500, cursor: "pointer",
                 color: label === "Мои квизы" ? "#E7E8EA" : "#909499",
@@ -293,7 +321,13 @@ function CreateQuizPageInner() {
               <span style={{ fontSize: "14px", fontWeight: 600, color: "#76787A" }}>Вопросы</span>
             </div>
             <div style={{ width: "80px", height: "2px", background: "#363738", margin: "0 16px" }} />
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <div
+              onClick={() => { if (editId) router.push(`/quiz/${editId}/review`); }}
+              style={{
+                display: "flex", alignItems: "center", gap: "10px",
+                cursor: editId ? "pointer" : "default",
+              }}
+            >
               <div style={{
                 width: "28px", height: "28px", borderRadius: "14px", flexShrink: 0,
                 background: "#2C2D2E", border: "1px solid #363738",
@@ -422,6 +456,36 @@ function CreateQuizPageInner() {
                 ))}
               </div>
             </div>
+
+            {/* Difficulty */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+              <label style={{ fontSize: "13px", fontWeight: 500, color: "#909499" }}>Сложность</label>
+              <div style={{ display: "flex", gap: "10px" }}>
+                {DIFFICULTY_OPTIONS.map(({ label, color }) => (
+                  <button
+                    key={label}
+                    onClick={() => setDifficulty(label)}
+                    style={{
+                      flex: 1, padding: "11px 0", borderRadius: "10px", cursor: "pointer",
+                      fontSize: "14px", fontWeight: 600, fontFamily: "Inter, sans-serif",
+                      background: difficulty === label ? `${color}1A` : "transparent",
+                      border: `1px solid ${difficulty === label ? color : "#363738"}`,
+                      color: difficulty === label ? color : "#76787A",
+                    }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Tags */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+              <label style={{ fontSize: "13px", fontWeight: 500, color: "#909499" }}>
+                Теги <span style={{ color: "#76787A" }}>(помогают игрокам найти квиз)</span>
+              </label>
+              <TagsField tags={tags} onChange={setTags} />
+            </div>
           </div>
         </div>
 
@@ -435,13 +499,6 @@ function CreateQuizPageInner() {
           overflow: "hidden",
           overflowY: "auto",
         }}>
-          <div style={{
-            position: "absolute",
-            width: "400px", height: "400px", borderRadius: "50%",
-            background: "radial-gradient(circle at 50% 50%, rgba(0,119,255,1) 0%, rgba(0,119,255,0) 60%)",
-            top: "-200px", left: "70px",
-            opacity: 0.15, filter: "blur(40px)", pointerEvents: "none",
-          }} />
 
           <div style={{ position: "relative", display: "flex", flexDirection: "column", gap: "15px" }}>
             <span style={{
@@ -457,30 +514,122 @@ function CreateQuizPageInner() {
               boxShadow: "0 8px 24px rgba(0,0,0,0.3), inset 0 1px 0 1px rgba(255,255,255,0.04)",
               overflow: "hidden",
             }}>
-              <div style={{
-                margin: "25px 25px 0",
-                height: "152px", borderRadius: "10px",
-                background: title ? (CATEGORY_GRADIENTS[category] ?? CATEGORY_GRADIENTS.Engineering) : "linear-gradient(161deg, #E64646 0%, rgba(230,70,70,0.6) 100%)",
-                display: "flex", flexDirection: "column",
-                alignItems: "center", justifyContent: "center", gap: "8px",
-              }}>
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" />
-                  <polyline points="21 15 16 10 5 21" />
-                </svg>
-                <span style={{ fontSize: "13px", color: "rgba(255,255,255,0.85)" }}>Нажмите для выбора обложки</span>
-              </div>
+              <input
+                ref={coverInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/gif,image/webp"
+                style={{ display: "none" }}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleCoverUpload(file);
+                  e.target.value = "";
+                }}
+              />
+              {coverImageUrl ? (
+                <div style={{ position: "relative", margin: "25px 25px 0", height: "152px", borderRadius: "10px", overflow: "hidden", border: "1px solid #363738", background: "#1A1A1B" }}>
+                  {/* Blurred backdrop fills the frame so any aspect ratio looks clean */}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={coverImageUrl} alt="" aria-hidden style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", filter: "blur(24px)", transform: "scale(1.2)" }} />
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={coverImageUrl} alt="Обложка квиза" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "contain", display: "block" }} />
+                  <div style={{ position: "absolute", top: 8, right: 8, display: "flex", gap: 6 }}>
+                    <button
+                      onClick={() => coverInputRef.current?.click()}
+                      style={{
+                        display: "flex", alignItems: "center", gap: 5, padding: "5px 10px", borderRadius: 6,
+                        background: "rgba(25,25,26,0.85)", border: "1px solid #363738",
+                        color: "#E7E8EA", fontSize: 11, fontWeight: 600, cursor: "pointer",
+                        fontFamily: "Inter, sans-serif", backdropFilter: "blur(6px)",
+                      }}
+                    >
+                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                        <path d="M1 9.5V11h1.5l4.44-4.44-1.5-1.5L1 9.5zm7.07-4.07a.4.4 0 0 0 0-.57L6.64 3.43a.4.4 0 0 0-.57 0l-.93.93 2.07 2.07.86-.86z" fill="currentColor" />
+                      </svg>
+                      Заменить
+                    </button>
+                    <button
+                      onClick={() => setCoverImageUrl(null)}
+                      style={{
+                        display: "flex", alignItems: "center", gap: 5, padding: "5px 10px", borderRadius: 6,
+                        background: "rgba(230,70,70,0.15)", border: "1px solid rgba(230,70,70,0.3)",
+                        color: "#E64646", fontSize: 11, fontWeight: 600, cursor: "pointer",
+                        fontFamily: "Inter, sans-serif", backdropFilter: "blur(6px)",
+                      }}
+                    >
+                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                        <path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                      </svg>
+                      Удалить
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div
+                  onClick={() => !coverUploading && coverInputRef.current?.click()}
+                  onDragOver={(e) => { e.preventDefault(); setCoverDragOver(true); }}
+                  onDragLeave={() => setCoverDragOver(false)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setCoverDragOver(false);
+                    const file = e.dataTransfer.files[0];
+                    if (file) handleCoverUpload(file);
+                  }}
+                  style={{
+                    margin: "25px 25px 0",
+                    height: "152px", borderRadius: "10px",
+                    background: title ? (CATEGORY_GRADIENTS[category] ?? CATEGORY_GRADIENTS.Engineering) : "linear-gradient(161deg, #E64646 0%, rgba(230,70,70,0.6) 100%)",
+                    display: "flex", flexDirection: "column",
+                    alignItems: "center", justifyContent: "center", gap: "8px",
+                    cursor: coverUploading ? "default" : "pointer",
+                    outline: coverDragOver ? "2px dashed rgba(255,255,255,0.8)" : "none", outlineOffset: "-6px",
+                  }}
+                >
+                  {coverUploading ? (
+                    <>
+                      <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+                        <circle cx="12" cy="12" r="9" stroke="rgba(255,255,255,0.9)" strokeWidth="2" strokeDasharray="40 16" strokeLinecap="round">
+                          <animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="0.8s" repeatCount="indefinite" />
+                        </circle>
+                      </svg>
+                      <span style={{ fontSize: "13px", color: "rgba(255,255,255,0.85)" }}>Загружаем…</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" />
+                        <polyline points="21 15 16 10 5 21" />
+                      </svg>
+                      <span style={{ fontSize: "13px", color: "rgba(255,255,255,0.85)" }}>Нажмите для выбора обложки</span>
+                      <span style={{ fontSize: "11px", color: "rgba(255,255,255,0.6)" }}>JPG, PNG, GIF, WEBP · до 5 МБ</span>
+                    </>
+                  )}
+                </div>
+              )}
 
               <div style={{ padding: "0 25px 25px" }}>
                 <div style={{
                   display: "inline-flex", alignItems: "center",
                   padding: "4px 10px 3px", borderRadius: "999px",
-                  background: "rgba(230,70,70,0.12)", marginTop: "16px", marginBottom: "8px",
+                  background: "rgba(0,0,0,0.3)", backdropFilter: "blur(8px)", marginTop: "16px", marginBottom: "8px",
                 }}>
-                  <span style={{ fontSize: "12px", fontWeight: 600, letterSpacing: "0.02em", textTransform: "uppercase", color: "#E64646" }}>
+                  <span style={{ fontSize: "12px", fontWeight: 600, letterSpacing: "0.02em", textTransform: "uppercase", color: "#fff" }}>
                     {CATEGORY_LABELS[category] ?? category}
                   </span>
                 </div>
+                {(() => {
+                  const diff = DIFFICULTY_OPTIONS.find((d) => d.label === difficulty);
+                  if (!diff) return null;
+                  return (
+                    <div style={{
+                      display: "inline-flex", alignItems: "center", gap: "5px",
+                      padding: "4px 10px 3px", borderRadius: "999px", marginLeft: "6px",
+                      background: `${diff.color}1A`, border: `1px solid ${diff.color}55`,
+                    }}>
+                      <span style={{ width: 6, height: 6, borderRadius: "50%", background: diff.color }} />
+                      <span style={{ fontSize: "12px", fontWeight: 600, color: diff.color }}>{diff.label}</span>
+                    </div>
+                  );
+                })()}
 
                 <p style={{ fontSize: "20px", fontWeight: 700, margin: "0 0 8px", color: "#E7E8EA", minHeight: "28px" }}>
                   {title || <span style={{ color: "#76787A", fontWeight: 400, fontSize: "16px" }}>Здесь появится название квиза</span>}
@@ -500,6 +649,20 @@ function CreateQuizPageInner() {
                     {SCORING_OPTIONS.find((s) => s.id === scoring)?.label}
                   </span>
                 </div>
+
+                {tags.length > 0 && (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "14px" }}>
+                    {tags.map((tag) => (
+                      <span key={tag} style={{
+                        padding: "3px 9px", borderRadius: "999px",
+                        background: "rgba(0,119,255,0.1)", border: "1px solid rgba(0,119,255,0.25)",
+                        color: "#71AAEB", fontSize: "12px",
+                      }}>
+                        #{tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -531,6 +694,84 @@ function CreateQuizPageInner() {
         input[type=range]::-moz-range-track { height: 6px; background: transparent; }
         select option { background: #232324; color: #E7E8EA; }
       `}</style>
+    </div>
+  );
+}
+
+function TagsField({ tags, onChange }: { tags: string[]; onChange: (tags: string[]) => void }) {
+  const [adding, setAdding] = useState(false);
+  const [input, setInput] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  function startAdding() {
+    setAdding(true);
+    setTimeout(() => inputRef.current?.focus(), 0);
+  }
+
+  function commit() {
+    const val = input.trim().toLowerCase().replace(/\s+/g, "-");
+    if (val && !tags.includes(val)) onChange([...tags, val]);
+    setInput("");
+    setAdding(false);
+  }
+
+  function onKeyDown(e: React.KeyboardEvent) {
+    if (e.key === "Enter") { e.preventDefault(); commit(); }
+    if (e.key === "Escape") { setInput(""); setAdding(false); }
+  }
+
+  return (
+    <div style={{
+      display: "flex", flexWrap: "wrap", gap: 7, alignItems: "center",
+      padding: "10px 12px", borderRadius: 8,
+      background: "#232324", border: "1px solid #363738", minHeight: 44, boxSizing: "border-box",
+    }}>
+      {tags.map((tag) => (
+        <span key={tag} style={{
+          display: "flex", alignItems: "center", gap: 5,
+          padding: "4px 8px 4px 10px", borderRadius: 999,
+          background: "rgba(0,119,255,0.1)", border: "1px solid rgba(0,119,255,0.25)",
+          color: "#71AAEB", fontSize: 13,
+        }}>
+          {tag}
+          <button
+            onClick={() => onChange(tags.filter((t) => t !== tag))}
+            style={{
+              background: "none", border: "none", cursor: "pointer",
+              color: "#0077FF", lineHeight: 1, padding: 0, display: "flex", alignItems: "center",
+            }}
+          >
+            <svg width="11" height="11" viewBox="0 0 10 10" fill="none">
+              <path d="M2 2l6 6M8 2l-6 6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+            </svg>
+          </button>
+        </span>
+      ))}
+
+      {adding ? (
+        <input
+          ref={inputRef}
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={onKeyDown}
+          onBlur={commit}
+          placeholder="тег…"
+          style={{
+            width: 100, padding: "4px 10px", borderRadius: 999,
+            background: "rgba(0,119,255,0.08)", border: "1px solid rgba(0,119,255,0.4)",
+            color: "#E7E8EA", fontSize: 13, fontFamily: "Inter, sans-serif", outline: "none",
+          }}
+        />
+      ) : (
+        <button
+          onClick={startAdding}
+          style={{
+            padding: "4px 10px", borderRadius: 999,
+            background: "transparent", border: "1px dashed #363738",
+            color: "#76787A", fontSize: 13, cursor: "pointer", fontFamily: "Inter, sans-serif",
+          }}
+        >+ добавить</button>
+      )}
     </div>
   );
 }

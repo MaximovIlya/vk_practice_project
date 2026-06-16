@@ -44,6 +44,9 @@ model Quiz {
   timePerQuestion    Int      @default(30)
   pointsPerQuestion  Int      @default(1000)
   scoring            String   @default("standard") // standard | speed | streak
+  difficulty         String   @default("Средне")   // Легко | Средне | Сложно
+  tags               String[] @default([])
+  coverImageUrl      String?
   archived           Boolean  @default(false)
   authorId           String
   createdAt       DateTime @default(now())

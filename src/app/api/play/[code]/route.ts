@@ -37,12 +37,18 @@ export async function GET(_req: Request, { params }: { params: { code: string } 
     quiz: {
       id: quizSession.quiz.id,
       title: quizSession.quiz.title,
+      description: quizSession.quiz.description,
+      category: quizSession.quiz.category,
       scoring: quizSession.quiz.scoring,
+      difficulty: quizSession.quiz.difficulty,
+      tags: quizSession.quiz.tags,
+      coverImageUrl: quizSession.quiz.coverImageUrl,
       hostName: quizSession.quiz.author.name ?? "Host",
       questions: quizSession.quiz.questions.map((q) => ({
         id: q.id,
         text: q.text,
         type: q.type,
+        imageUrl: q.imageUrl ?? null,
         timeLimit: q.timeLimit,
         points: q.points,
         answers: q.answers,

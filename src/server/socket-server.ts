@@ -167,6 +167,18 @@ export function initSocketServer(httpServer: HTTPServer) {
       await revealQuestion(io, sessionId);
     });
 
+    socket.on("cancel-session", async ({ sessionId }) => {
+      const advTimer = sessionTimers.get(`${sessionId}:advance`);
+      if (advTimer) { clearTimeout(advTimer); sessionTimers.delete(`${sessionId}:advance`); }
+      const timer = sessionTimers.get(sessionId);
+      if (timer) { clearTimeout(timer); sessionTimers.delete(sessionId); }
+      sessionIndexes.delete(sessionId);
+      sessionEndsAt.delete(sessionId);
+      sessionReveal.delete(sessionId);
+      await prisma.quizSession.update({ where: { id: sessionId }, data: { status: "FINISHED" } });
+      io.to(roomKey(sessionId)).emit("session-cancelled");
+    });
+
     socket.on("submit-answer", async ({ sessionId, questionId, answerIds, userId }) => {
       const session = await prisma.quizSession.findUnique({
         where: { id: sessionId },
@@ -187,17 +199,22 @@ export function initSocketServer(httpServer: HTTPServer) {
 
       let isCorrect: boolean;
       let earnedPoints: number;
+      let penaltyPoints = 0;
 
       if (question.type === "MULTIPLE") {
         const correctlySelected = answerIds.filter((id) => correctIds.includes(id)).length;
         const wronglySelected = answerIds.filter((id) => !correctIds.includes(id)).length;
         isCorrect = correctlySelected === correctIds.length && wronglySelected === 0;
-        // Partial credit: each correct selection adds points, each wrong selection
-        // subtracts the same amount. Net is clamped to 0 so you can't go negative.
-        const net = Math.max(0, correctlySelected - wronglySelected);
-        earnedPoints = correctIds.length > 0
-          ? Math.round((net / correctIds.length) * question.points)
-          : 0;
+        if (correctIds.length > 0) {
+          const pointsPerCorrect = question.points / correctIds.length;
+          const earned = correctlySelected * pointsPerCorrect;
+          // Penalty is 50% of points-per-correct for each wrong selection
+          const penalty = wronglySelected * 0.5 * pointsPerCorrect;
+          earnedPoints = Math.max(0, Math.round(earned - penalty));
+          penaltyPoints = wronglySelected > 0 ? Math.round(penalty) : 0;
+        } else {
+          earnedPoints = 0;
+        }
       } else {
         isCorrect = answerIds.length === correctIds.length &&
           answerIds.every((id) => correctIds.includes(id));
@@ -252,7 +269,7 @@ export function initSocketServer(httpServer: HTTPServer) {
       // Tell the submitting player exactly how many points they earned this
       // round (after the speed/streak modifiers), so the reveal screen can show
       // the real number instead of the base points.
-      socket.emit("answer-result", { points: earnedPoints, isCorrect });
+      socket.emit("answer-result", { points: earnedPoints, isCorrect, penaltyPoints });
 
       // Broadcast updated vote counts
       const votes = await getVotes(sessionId, questionId);
@@ -312,23 +329,21 @@ async function revealQuestion(io: IO, sessionId: string) {
   const question = session.quiz.questions[idx as number];
   if (!question) return;
 
-  // For the final question we skip the 5-second reveal window entirely and jump
-  // straight to the results — there is no "next question" to count down to.
   const isLast = (idx as number) >= session.quiz.questions.length - 1;
-  if (isLast) {
-    await finishQuiz(io, sessionId);
-    return;
-  }
-
   const correctAnswerIds = question.answers.filter((a) => a.isCorrect).map((a) => a.id);
   const votes = await getVotes(sessionId, question.id);
 
   sessionReveal.set(sessionId, { correctAnswerIds, votes });
-  io.to(roomKey(sessionId)).emit("question-ended", { correctAnswerIds, votes, questionIndex: idx as number });
+  io.to(roomKey(sessionId)).emit("question-ended", { correctAnswerIds, votes, questionIndex: idx as number, isLast });
 
   // Update scores in leaderboard
   const players = await getLeaderboard(sessionId);
   io.to(roomKey(sessionId)).emit("score-update", players);
+
+  // The final question shows its reveal just like any other, but instead of
+  // auto-advancing we wait for the organizer to press "Перейти к результатам"
+  // (which fires next-question → finishQuiz). So no auto-advance timer here.
+  if (isLast) return;
 
   // Auto-advance after 5-second reveal window
   const nextIdx = (idx as number) + 1;

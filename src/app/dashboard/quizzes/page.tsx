@@ -28,6 +28,9 @@ export default async function MyQuizzesPage() {
     category: q.category,
     questionCount: q._count.questions,
     archived: q.archived,
+    difficulty: q.difficulty,
+    tags: q.tags,
+    coverImageUrl: q.coverImageUrl,
     totalPlays: q.sessions.reduce((sum, s) => sum + s._count.players, 0),
     lastRun:
       q.sessions
