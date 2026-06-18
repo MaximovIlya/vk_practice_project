@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
+import { signOut, useSession } from "next-auth/react";
 
 type Answer = { id?: string; text: string; isCorrect: boolean };
 type Question = {
@@ -31,10 +32,12 @@ const ANS_BG = ["#4DC4FF", "#FFA000", "#4BB34B", "#E64646"];
 export default function EditQuestionsPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
+  const { data: session } = useSession();
 
   const [quiz, setQuiz] = useState<Quiz | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedIdx, setSelectedIdx] = useState(0);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [savedSec, setSavedSec] = useState<number | null>(null);
   const [imageUploading, setImageUploading] = useState(false);
@@ -154,108 +157,159 @@ export default function EditQuestionsPage() {
     );
   }
 
-  return (
-    <div style={{ minHeight: "100vh", height: "100vh", background: "#19191A", fontFamily: "Inter, sans-serif", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+  const userName = session?.user?.name ?? "Вы";
+  const initials = userName.trim()
+    ? userName.trim().split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase()
+    : "?";
 
-      {/* ── Top bar ── */}
-      <header style={{
-        flexShrink: 0, height: 56,
-        display: "flex", alignItems: "center",
-        padding: "0 20px",
-        background: "rgba(25,25,26,0.9)",
+  return (
+    <div className="edit-root" style={{ minHeight: "100vh", height: "100vh", background: "#19191A", fontFamily: "Inter, sans-serif", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+
+      {/* ── Nav ── */}
+      <nav className="app-navbar" style={{
+        flexShrink: 0,
+        position: "sticky", top: 0, zIndex: 10,
+        background: "rgba(25, 25, 26, 0.85)",
         backdropFilter: "blur(12px)",
+        WebkitBackdropFilter: "blur(12px)",
         borderBottom: "1px solid #363738",
-        position: "relative",
+        height: "65px",
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "0 32px",
       }}>
-        {/* Left: back button + quiz title */}
-        <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-          <Link
-            href="/dashboard"
-            style={{
-              flexShrink: 0, display: "flex", alignItems: "center", gap: 5,
-              color: "#909499", fontSize: 13, textDecoration: "none",
-              padding: "5px 8px", borderRadius: 7,
-              border: "1px solid transparent",
-            }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#363738"; (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.04)"; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "transparent"; (e.currentTarget as HTMLElement).style.background = "transparent"; }}
-          >
-            <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
-              <path d="M7 2L3.5 5.5 7 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            Главная
-          </Link>
-          <span style={{ color: "#363738", fontSize: 16, lineHeight: 1 }}>·</span>
-          <input
-            value={quiz.title}
-            onChange={(e) => setQuiz({ ...quiz, title: e.target.value })}
-            style={{
-              background: "transparent", border: "none", outline: "none",
-              color: "#E7E8EA", fontSize: 14, fontWeight: 600,
-              fontFamily: "Inter, sans-serif", minWidth: 0, flex: 1, maxWidth: 280,
-            }}
-            onBlur={() => {
-              fetch(`/api/quiz/${params.id}`, {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ title: quiz.title }),
-              });
-            }}
-          />
+        <div style={{ display: "flex", alignItems: "center", gap: "32px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <div style={{
+              width: "28px", height: "28px", borderRadius: "7.84px",
+              background: "linear-gradient(180deg, #0077FF, #005CC4)",
+              display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+            }}>
+              <svg width="16" height="11" viewBox="8 11 20 14" fill="none">
+                <path d="M10.5825 18H13.0552L14.7036 13.055L18 22.946L19.649 18H25.418"
+                  stroke="white" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+            <span style={{ fontWeight: 800, fontSize: "20px", letterSpacing: "-0.02em" }}>Pulse</span>
+          </div>
+          <div style={{ display: "flex", gap: "4px" }}>
+            {([
+              { label: "Главная", href: "/dashboard" },
+              { label: "Мои квизы", href: "/dashboard/quizzes" },
+            ] as const).map(({ label, href }) => (
+              <Link key={label} href={href} style={{
+                fontSize: "14px", fontWeight: 500, cursor: "pointer",
+                color: label === "Мои квизы" ? "#E7E8EA" : "#909499",
+                padding: "8px 14px", borderRadius: "6px", textDecoration: "none",
+                background: label === "Мои квизы" ? "rgba(255,255,255,0.05)" : "transparent",
+              }}>
+                {label}
+              </Link>
+            ))}
+          </div>
         </div>
 
-        {/* Center: auto-save */}
-        <div style={{ position: "absolute", left: "50%", transform: "translateX(-50%)" }}>
-          <span style={{ display: "flex", alignItems: "center", gap: 5, color: "#76787A", fontSize: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <div className="nav-role-badge" style={{
+            padding: "4px 10px", borderRadius: "999px",
+            background: "rgba(0,119,255,0.12)",
+            fontSize: "12px", fontWeight: 600, letterSpacing: "0.02em",
+            textTransform: "uppercase", color: "#71AAEB",
+          }}>
+            ОРГАНИЗАТОР
+          </div>
+          <div style={{ position: "relative" }}>
+            <div onClick={() => setMenuOpen((v) => !v)} className="nav-user-pill" style={{
+              display: "flex", alignItems: "center", gap: "10px",
+              padding: "7px 15px 7px 7px", borderRadius: "999px",
+              background: "#2C2D2E", border: "1px solid #363738",
+              cursor: "pointer", userSelect: "none",
+            }}>
+              <div style={{
+                width: "28px", height: "28px", borderRadius: "14px",
+                background: "linear-gradient(180deg, #0077FF, #005CC4)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: "12px", fontWeight: 700, color: "#fff", flexShrink: 0,
+              }}>{initials}</div>
+              <span className="nav-user-name" style={{ fontSize: "14px", fontWeight: 500 }}>{userName}</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#76787A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                style={{ transform: menuOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.15s" }}>
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </div>
+            {menuOpen && (
+              <>
+                <div onClick={() => setMenuOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 20 }} />
+                <div style={{
+                  position: "absolute", top: "calc(100% + 8px)", right: 0, zIndex: 30,
+                  minWidth: "160px", background: "#232324",
+                  border: "1px solid #363738", borderRadius: "10px",
+                  boxShadow: "0 8px 24px rgba(0,0,0,0.4)", overflow: "hidden",
+                }}>
+                  <button onClick={() => signOut({ callbackUrl: "/login" })} style={{
+                    display: "flex", alignItems: "center", gap: "10px",
+                    width: "100%", padding: "11px 14px",
+                    background: "none", border: "none",
+                    color: "#E64646", fontSize: "14px", fontWeight: 500,
+                    cursor: "pointer", textAlign: "left",
+                  }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                      <polyline points="16 17 21 12 16 7" />
+                      <line x1="21" y1="12" x2="9" y2="12" />
+                    </svg>
+                    Выйти
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </nav>
+
+      {/* ── Sub-header: breadcrumb + save indicator + continue ── */}
+      <div className="subheader-bar details-subheader" style={{
+        flexShrink: 0,
+        borderBottom: "1px solid #363738",
+        display: "flex", alignItems: "center", justifyContent: "flex-end",
+        padding: "20px 48px 21px",
+      }}>
+        <div className="subheader-actions" style={{ display: "flex", alignItems: "center", gap: "16px", flexShrink: 0 }}>
+          {/* Save indicator */}
+          <span className="edit-save-indicator" style={{ display: "flex", alignItems: "center", gap: 6, color: "#76787A", fontSize: 13, whiteSpace: "nowrap" }}>
             <span style={{
-              width: 5, height: 5, borderRadius: "50%",
+              width: 6, height: 6, borderRadius: "50%",
               background: saving ? "#FFA000" : (savedSec !== null ? "#4BB34B" : "#76787A"),
-              display: "inline-block",
+              display: "inline-block", flexShrink: 0,
             }} />
             {savedLabel()}
           </span>
-        </div>
-
-        {/* Right: action buttons */}
-        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>
-          {/* <button style={{
-            display: "flex", alignItems: "center", gap: 6,
-            padding: "7px 14px", borderRadius: 8,
-            border: "1px solid #363738", background: "transparent",
-            color: "#909499", fontSize: 13, cursor: "pointer",
-            fontFamily: "Inter, sans-serif",
-          }}>
-            {/* <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.4" />
-              <circle cx="7" cy="7" r="2" stroke="currentColor" strokeWidth="1.4" />
-            </svg>
-            Предпросмотр */}
-          {/* </div></button> */} 
+          {/* Continue (desktop / tablet — on phones this moves to the bottom bar) */}
           <button
+            className="subheader-continue"
             onClick={() => router.push(`/quiz/${quiz.id}/review`)}
             style={{
-              display: "flex", alignItems: "center", gap: 6,
-              padding: "7px 16px", borderRadius: 8, border: "none",
+              display: "flex", alignItems: "center", gap: "8px",
+              padding: "0 18px", height: "40px", borderRadius: "8px",
               background: "linear-gradient(180deg, #0077FF 0%, #005CC4 100%)",
-              color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer",
+              boxShadow: "0 4px 16px rgba(0,119,255,0.35), inset 0 1px 0 rgba(255,255,255,0.2)",
+              border: "none",
+              color: "#E7E8EA", fontSize: "14px", fontWeight: 600, cursor: "pointer",
               fontFamily: "Inter, sans-serif",
-              boxShadow: "0 4px 12px rgba(0,119,255,0.35)",
             }}
           >
-            <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-              <path d="M9 2L5.5 5.5 9 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" transform="rotate(180 6.5 5.5)"/>
-            </svg>
             Продолжить
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
+            </svg>
           </button>
         </div>
-      </header>
+      </div>
 
       {/* ── Step indicator ── */}
-      <div style={{
+      <div className="step-indicator" style={{
         flexShrink: 0,
         display: "flex", alignItems: "center", justifyContent: "center",
         padding: "10px 20px",
-        borderBottom: "1px solid #363738",
         background: "#19191A",
       }}>
         {/* Step 1 — back to quiz details */}
@@ -272,7 +326,7 @@ export default function EditQuestionsPage() {
           <span style={{ fontSize: 13, fontWeight: 600, color: "#909499" }}>Детали квиза</span>
         </Link>
 
-        <div style={{ width: 56, height: 2, background: "#363738", margin: "0 14px" }} />
+        <div className="step-connector" style={{ width: 56, height: 2, background: "#363738", margin: "0 14px" }} />
 
         {/* Step 2 — current */}
         <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
@@ -285,7 +339,7 @@ export default function EditQuestionsPage() {
           <span style={{ fontSize: 13, fontWeight: 600, color: "#E7E8EA" }}>Вопросы</span>
         </div>
 
-        <div style={{ width: 56, height: 2, background: "#363738", margin: "0 14px" }} />
+        <div className="step-connector" style={{ width: 56, height: 2, background: "#363738", margin: "0 14px" }} />
 
         {/* Step 3 — review & publish */}
         <Link
@@ -303,10 +357,10 @@ export default function EditQuestionsPage() {
       </div>
 
       {/* ── Body ── */}
-      <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+      <div className="edit-body" style={{ flex: 1, display: "flex", overflow: "hidden" }}>
 
         {/* ── Left: question list (260px) ── */}
-        <aside style={{
+        <aside className="edit-list" style={{
           width: 260, flexShrink: 0,
           background: "#19191A",
           borderRight: "1px solid #363738",
@@ -412,7 +466,7 @@ export default function EditQuestionsPage() {
         </aside>
 
         {/* ── Center: editor ── */}
-        <main style={{ flex: 1, overflowY: "auto", padding: "28px 32px", background: "#19191A" }}>
+        <main className="edit-main" style={{ flex: 1, overflowY: "auto", padding: "28px 32px", background: "#19191A" }}>
           {!selectedQuestion ? (
             <div style={{ textAlign: "center", color: "#76787A", fontSize: 14, marginTop: 80 }}>
               Выберите или добавьте вопрос для редактирования.
@@ -420,7 +474,7 @@ export default function EditQuestionsPage() {
           ) : (
             <div style={{ maxWidth: 640 }}>
               {/* Editor header */}
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
+              <div className="editor-meta" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
                   <span style={{ color: "#76787A", fontSize: 13 }}>
                     Вопрос {selectedIdx + 1} из {quiz.questions.length}
@@ -657,7 +711,7 @@ export default function EditQuestionsPage() {
                           onChange={(e) => updateAnswer(ai, { text: e.target.value })}
                           placeholder={`Вариант ${letter}`}
                           style={{
-                            flex: 1, background: "transparent", border: "none",
+                            flex: 1, minWidth: 0, background: "transparent", border: "none",
                             color: "#E7E8EA", fontSize: 14, fontFamily: "Inter, sans-serif", outline: "none",
                           }}
                         />
@@ -670,7 +724,7 @@ export default function EditQuestionsPage() {
                             background: "none", border: "none", cursor: "pointer", padding: 0,
                           }}
                         >
-                          <span style={{
+                          <span className="answer-correct-label" style={{
                             fontSize: 11, fontWeight: 600,
                             color: answer.isCorrect ? "#4BB34B" : "#76787A",
                             whiteSpace: "nowrap",
@@ -715,7 +769,7 @@ export default function EditQuestionsPage() {
         </main>
 
         {/* ── Right: question settings ── */}
-        <aside style={{
+        <aside className="edit-settings" style={{
           width: 220, flexShrink: 0,
           background: "#19191A", borderLeft: "1px solid #363738",
           overflowY: "auto", padding: "20px 16px",
@@ -744,6 +798,26 @@ export default function EditQuestionsPage() {
         </>)}
         </aside>
 
+      </div>
+
+      {/* Mobile-only: continue button pinned to the bottom of the page */}
+      <div className="mobile-continue-bar" style={{ display: "none" }}>
+        <button
+          onClick={() => router.push(`/quiz/${quiz.id}/review`)}
+          style={{
+            width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+            height: 48, borderRadius: 10, border: "none",
+            background: "linear-gradient(180deg, #0077FF 0%, #005CC4 100%)",
+            boxShadow: "0 4px 16px rgba(0,119,255,0.35), inset 0 1px 0 rgba(255,255,255,0.2)",
+            color: "#E7E8EA", fontSize: 15, fontWeight: 600, cursor: "pointer",
+            fontFamily: "Inter, sans-serif",
+          }}
+        >
+          Продолжить
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
+          </svg>
+        </button>
       </div>
     </div>
   );

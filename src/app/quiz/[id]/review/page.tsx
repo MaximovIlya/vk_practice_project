@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import { pluralize } from "@/lib/plural";
 
 type Answer = { id?: string; text: string; isCorrect: boolean };
@@ -96,6 +96,7 @@ export default function ReviewPage() {
 
   const [quiz, setQuiz] = useState<Quiz | null>(null);
   const [loading, setLoading] = useState(true);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     if (!params.id) return;
@@ -143,91 +144,142 @@ export default function ReviewPage() {
   return (
     <div style={{ minHeight: "100vh", background: "#19191A", fontFamily: "Inter, sans-serif", color: "#E7E8EA", display: "flex", flexDirection: "column" }}>
 
-      {/* ── Header ── */}
-      <header style={{
-        flexShrink: 0, height: 56,
-        display: "flex", alignItems: "center",
-        padding: "0 20px",
-        background: "rgba(25,25,26,0.9)",
-        backdropFilter: "blur(12px)",
-        borderBottom: "1px solid #363738",
+      {/* ── Nav ── */}
+      <nav className="app-navbar" style={{
+        flexShrink: 0,
         position: "sticky", top: 0, zIndex: 10,
+        background: "rgba(25, 25, 26, 0.85)",
+        backdropFilter: "blur(12px)",
+        WebkitBackdropFilter: "blur(12px)",
+        borderBottom: "1px solid #363738",
+        height: "65px",
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "0 32px",
       }}>
-        <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-          <Link
-            href="/dashboard"
-            style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 5, color: "#909499", fontSize: 13, textDecoration: "none", padding: "5px 8px", borderRadius: 7, border: "1px solid transparent" }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#363738"; (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.04)"; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "transparent"; (e.currentTarget as HTMLElement).style.background = "transparent"; }}
-          >
-            <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
-              <path d="M7 2L3.5 5.5 7 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            Главная
-          </Link>
-          <span style={{ color: "#363738", fontSize: 16 }}>·</span>
-          <span style={{ fontSize: 14, fontWeight: 600, color: "#E7E8EA", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 280 }}>{quiz.title}</span>
+        <div style={{ display: "flex", alignItems: "center", gap: "32px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <div style={{
+              width: "28px", height: "28px", borderRadius: "7.84px",
+              background: "linear-gradient(180deg, #0077FF, #005CC4)",
+              display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+            }}>
+              <svg width="16" height="11" viewBox="8 11 20 14" fill="none">
+                <path d="M10.5825 18H13.0552L14.7036 13.055L18 22.946L19.649 18H25.418"
+                  stroke="white" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+            <span style={{ fontWeight: 800, fontSize: "20px", letterSpacing: "-0.02em" }}>Pulse</span>
+          </div>
+          <div style={{ display: "flex", gap: "4px" }}>
+            {([
+              { label: "Главная", href: "/dashboard" },
+              { label: "Мои квизы", href: "/dashboard/quizzes" },
+            ] as const).map(({ label, href }) => (
+              <Link key={label} href={href} style={{
+                fontSize: "14px", fontWeight: 500, cursor: "pointer",
+                color: label === "Мои квизы" ? "#E7E8EA" : "#909499",
+                padding: "8px 14px", borderRadius: "6px", textDecoration: "none",
+                background: label === "Мои квизы" ? "rgba(255,255,255,0.05)" : "transparent",
+              }}>
+                {label}
+              </Link>
+            ))}
+          </div>
         </div>
 
-        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>
-          <Link
-            href={`/quiz/${quiz.id}/edit`}
-            style={{
-              display: "flex", alignItems: "center", gap: 6,
-              padding: "7px 14px", borderRadius: 8,
-              border: "1px solid #363738", background: "transparent",
-              color: "#909499", fontSize: 13, textDecoration: "none",
-            }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#4A4B4D"; (e.currentTarget as HTMLElement).style.color = "#E7E8EA"; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#363738"; (e.currentTarget as HTMLElement).style.color = "#909499"; }}
-          >
-            <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
-              <path d="M7 2L3.5 5.5 7 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            К вопросам
-          </Link>
-          <button
-            disabled={!isReady}
-            onClick={() => router.push(`/quiz/${quiz.id}/run?reset=1`)}
-            style={{
-              display: "flex", alignItems: "center", gap: 6,
-              padding: "7px 16px", borderRadius: 8, border: "none",
-              background: isReady
-                ? "linear-gradient(180deg, #0077FF 0%, #005CC4 100%)"
-                : "#2C2D2E",
-              color: isReady ? "#fff" : "#4A4B4D",
-              fontSize: 13, fontWeight: 600, cursor: isReady ? "pointer" : "not-allowed",
-              fontFamily: "Inter, sans-serif",
-              boxShadow: isReady ? "0 4px 12px rgba(0,119,255,0.35)" : "none",
-              transition: "all 0.15s",
-            }}
-          >
-            <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-              <path d="M3 2l8 4.5L3 11V2z" fill="currentColor" />
-            </svg>
-            Запустить квиз
-          </button>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <div className="nav-role-badge" style={{
+            padding: "4px 10px", borderRadius: "999px",
+            background: "rgba(0,119,255,0.12)",
+            fontSize: "12px", fontWeight: 600, letterSpacing: "0.02em",
+            textTransform: "uppercase", color: "#71AAEB",
+          }}>
+            ОРГАНИЗАТОР
+          </div>
+          <div style={{ position: "relative" }}>
+            <div onClick={() => setMenuOpen((v) => !v)} className="nav-user-pill" style={{
+              display: "flex", alignItems: "center", gap: "10px",
+              padding: "7px 15px 7px 7px", borderRadius: "999px",
+              background: "#2C2D2E", border: "1px solid #363738",
+              cursor: "pointer", userSelect: "none",
+            }}>
+              <div style={{
+                width: "28px", height: "28px", borderRadius: "14px",
+                background: "linear-gradient(180deg, #0077FF, #005CC4)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: "12px", fontWeight: 700, color: "#fff", flexShrink: 0,
+              }}>{initials}</div>
+              <span className="nav-user-name" style={{ fontSize: "14px", fontWeight: 500 }}>{userName}</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#76787A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                style={{ transform: menuOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.15s" }}>
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </div>
+            {menuOpen && (
+              <>
+                <div onClick={() => setMenuOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 20 }} />
+                <div style={{
+                  position: "absolute", top: "calc(100% + 8px)", right: 0, zIndex: 30,
+                  minWidth: "160px", background: "#232324",
+                  border: "1px solid #363738", borderRadius: "10px",
+                  boxShadow: "0 8px 24px rgba(0,0,0,0.4)", overflow: "hidden",
+                }}>
+                  <button onClick={() => signOut({ callbackUrl: "/login" })} style={{
+                    display: "flex", alignItems: "center", gap: "10px",
+                    width: "100%", padding: "11px 14px",
+                    background: "none", border: "none",
+                    color: "#E64646", fontSize: "14px", fontWeight: 500,
+                    cursor: "pointer", textAlign: "left",
+                  }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                      <polyline points="16 17 21 12 16 7" />
+                      <line x1="21" y1="12" x2="9" y2="12" />
+                    </svg>
+                    Выйти
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
-      </header>
+      </nav>
+
+      {/* ── Sub-header: breadcrumb ── */}
+      <div className="subheader-bar" style={{
+        flexShrink: 0,
+        borderBottom: "1px solid #363738",
+        display: "flex", alignItems: "center", justifyContent: "flex-start",
+        padding: "20px 48px 21px",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
+          <Link href="/dashboard/quizzes" style={{ fontSize: "14px", color: "#909499", textDecoration: "none", flexShrink: 0 }}>
+            Мои квизы
+          </Link>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#909499" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+            <polyline points="9 18 15 12 9 6" />
+          </svg>
+          <span style={{ fontSize: "14px", fontWeight: 500, color: "#E7E8EA", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{quiz.title}</span>
+        </div>
+      </div>
 
       {/* ── Step indicator ── */}
-      <div style={{
+      <div className="step-indicator" style={{
         flexShrink: 0,
         display: "flex", alignItems: "center", justifyContent: "center",
         padding: "10px 20px",
-        borderBottom: "1px solid #363738",
         background: "#19191A",
       }}>
         <Link href={`/quiz/create?id=${quiz.id}`} style={{ display: "flex", alignItems: "center", gap: 9, textDecoration: "none" }}>
           <div style={{ width: 26, height: 26, borderRadius: "50%", flexShrink: 0, background: "#2C2D2E", border: "1px solid #363738", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, color: "#909499" }}>1</div>
           <span style={{ fontSize: 13, fontWeight: 600, color: "#909499" }}>Детали квиза</span>
         </Link>
-        <div style={{ width: 56, height: 2, background: "#363738", margin: "0 14px" }} />
+        <div className="step-connector" style={{ width: 56, height: 2, background: "#363738", margin: "0 14px" }} />
         <Link href={`/quiz/${quiz.id}/edit`} style={{ display: "flex", alignItems: "center", gap: 9, textDecoration: "none" }}>
           <div style={{ width: 26, height: 26, borderRadius: "50%", flexShrink: 0, background: "#2C2D2E", border: "1px solid #363738", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, color: "#909499" }}>2</div>
           <span style={{ fontSize: 13, fontWeight: 600, color: "#909499" }}>Вопросы</span>
         </Link>
-        <div style={{ width: 56, height: 2, background: "#0077FF", margin: "0 14px" }} />
+        <div className="step-connector" style={{ width: 56, height: 2, background: "#0077FF", margin: "0 14px" }} />
         <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
           <div style={{ width: 26, height: 26, borderRadius: "50%", flexShrink: 0, background: "linear-gradient(180deg, #0077FF, #005CC4)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, color: "#fff" }}>3</div>
           <span style={{ fontSize: 13, fontWeight: 600, color: "#E7E8EA" }}>Проверка и публикация</span>
@@ -235,7 +287,7 @@ export default function ReviewPage() {
       </div>
 
       {/* ── Body ── */}
-      <div style={{ flex: 1, display: "flex", gap: 32, padding: "32px 40px", maxWidth: 1200, width: "100%", margin: "0 auto", boxSizing: "border-box" }}>
+      <div className="review-layout" style={{ flex: 1, display: "flex", gap: 32, padding: "32px 40px", maxWidth: 1200, width: "100%", margin: "0 auto", boxSizing: "border-box" }}>
 
         {/* ── Left: checklist ── */}
         <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 20 }}>
@@ -391,7 +443,7 @@ export default function ReviewPage() {
         </div>
 
         {/* ── Right: preview + CTA ── */}
-        <div style={{ width: 320, flexShrink: 0, display: "flex", flexDirection: "column", gap: 20 }}>
+        <div className="review-side" style={{ width: 320, flexShrink: 0, display: "flex", flexDirection: "column", gap: 20 }}>
 
           {/* Quiz card preview */}
           <div>

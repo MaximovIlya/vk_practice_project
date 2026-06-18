@@ -51,6 +51,15 @@ function getInitials(name: string) {
     : parts[0][0].toUpperCase();
 }
 
+type DetailsCache = {
+  title: string; description: string; category: string;
+  scoring: string; difficulty: string; tags: string[]; coverImageUrl: string | null;
+};
+// Lives at module scope, so it survives client-side navigation. Returning to
+// this step (e.g. from the questions step) reads the cached values instantly
+// instead of flashing an empty form while the GET request is in flight.
+const detailsCache = new Map<string, DetailsCache>();
+
 export default function CreateQuizPage() {
   // useSearchParams() must be inside a Suspense boundary in Next 14, otherwise
   // it breaks the build / Fast Refresh. Wrap the real page in one.
@@ -70,15 +79,17 @@ function CreateQuizPageInner() {
   // (step 1) instead of creating a new one — this is how the questions screen
   // lets the organizer step back.
   const editId = searchParams.get("id");
+  // Seed initial state from the cache so a return visit renders instantly.
+  const cached = editId ? detailsCache.get(editId) : undefined;
 
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [category, setCategory] = useState("Engineering");
+  const [title, setTitle] = useState(cached?.title ?? "");
+  const [description, setDescription] = useState(cached?.description ?? "");
+  const [category, setCategory] = useState(cached?.category ?? "Engineering");
   const [visibility, setVisibility] = useState("Private · invite only");
-  const [scoring, setScoring] = useState("standard");
-  const [difficulty, setDifficulty] = useState("Средне");
-  const [tags, setTags] = useState<string[]>([]);
-  const [coverImageUrl, setCoverImageUrl] = useState<string | null>(null);
+  const [scoring, setScoring] = useState(cached?.scoring ?? "standard");
+  const [difficulty, setDifficulty] = useState(cached?.difficulty ?? "Средне");
+  const [tags, setTags] = useState<string[]>(cached?.tags ?? []);
+  const [coverImageUrl, setCoverImageUrl] = useState<string | null>(cached?.coverImageUrl ?? null);
   const [coverUploading, setCoverUploading] = useState(false);
   const [coverDragOver, setCoverDragOver] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -98,6 +109,13 @@ function CreateQuizPageInner() {
         setDifficulty(q.difficulty ?? "Средне");
         setTags(Array.isArray(q.tags) ? q.tags : []);
         setCoverImageUrl(q.coverImageUrl ?? null);
+        detailsCache.set(editId, {
+          title: q.title ?? "", description: q.description ?? "",
+          category: q.category ?? "Engineering", scoring: q.scoring ?? "standard",
+          difficulty: q.difficulty ?? "Средне",
+          tags: Array.isArray(q.tags) ? q.tags : [],
+          coverImageUrl: q.coverImageUrl ?? null,
+        });
       });
   }, [editId]);
 
@@ -128,6 +146,9 @@ function CreateQuizPageInner() {
       });
       if (!res.ok) throw new Error("Failed");
       const quiz = await res.json();
+      // Keep the cache in sync with what we just saved, so stepping forward to
+      // the questions screen and back shows the saved values without a refetch flash.
+      detailsCache.set(quiz.id, { title, description, category, scoring, difficulty, tags, coverImageUrl });
       if (andContinue) router.push(`/quiz/${quiz.id}/edit`);
       else router.push("/dashboard");
     } finally {
@@ -139,7 +160,7 @@ function CreateQuizPageInner() {
     <div style={{ background: "#19191A", minHeight: "100vh", color: "#E7E8EA", fontFamily: "Inter, sans-serif" }}>
 
       {/* ── Nav ── */}
-      <nav style={{
+      <nav className="app-navbar" style={{
         position: "sticky", top: 0, zIndex: 10,
         background: "rgba(25, 25, 26, 0.85)",
         backdropFilter: "blur(12px)",
@@ -167,9 +188,9 @@ function CreateQuizPageInner() {
             {(["Главная", "Мои квизы"] as const).map((label) => (
               <Link key={label} href={label === "Главная" ? "/dashboard" : "#"} style={{
                 fontSize: "14px", fontWeight: 500, cursor: "pointer",
-                color: label === "Мои квизы" ? "#E7E8EA" : "#909499",
+                color: "#909499",
                 padding: "8px 14px", borderRadius: "6px", textDecoration: "none",
-                background: label === "Мои квизы" ? "rgba(255,255,255,0.05)" : "transparent",
+                background: "transparent",
               }}>
                 {label}
               </Link>
@@ -178,7 +199,7 @@ function CreateQuizPageInner() {
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <div style={{
+          <div className="nav-role-badge" style={{
             padding: "4px 10px", borderRadius: "999px",
             background: "rgba(0,119,255,0.12)",
             fontSize: "12px", fontWeight: 600, letterSpacing: "0.02em",
@@ -187,7 +208,7 @@ function CreateQuizPageInner() {
             ОРГАНИЗАТОР
           </div>
           <div style={{ position: "relative" }}>
-            <div onClick={() => setMenuOpen((v) => !v)} style={{
+            <div onClick={() => setMenuOpen((v) => !v)} className="nav-user-pill" style={{
               display: "flex", alignItems: "center", gap: "10px",
               padding: "7px 15px 7px 7px", borderRadius: "999px",
               background: "#2C2D2E", border: "1px solid #363738",
@@ -199,7 +220,7 @@ function CreateQuizPageInner() {
                 display: "flex", alignItems: "center", justifyContent: "center",
                 fontSize: "12px", fontWeight: 700, color: "#fff", flexShrink: 0,
               }}>{initials}</div>
-              <span style={{ fontSize: "14px", fontWeight: 500 }}>{userName}</span>
+              <span className="nav-user-name" style={{ fontSize: "14px", fontWeight: 500 }}>{userName}</span>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#76787A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
                 style={{ transform: menuOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.15s" }}>
                 <polyline points="6 9 12 15 18 9" />
@@ -235,23 +256,13 @@ function CreateQuizPageInner() {
         </div>
       </nav>
 
-      {/* ── Sub-header: breadcrumb + buttons ── */}
-      <div style={{
+      {/* ── Sub-header: action buttons (quiz name intentionally omitted) ── */}
+      <div className="subheader-bar details-subheader" style={{
         borderBottom: "1px solid #363738",
-        display: "flex", alignItems: "center", justifyContent: "space-between",
+        display: "flex", alignItems: "center", justifyContent: "flex-end",
         padding: "20px 48px 21px",
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <Link href="/dashboard" style={{ fontSize: "14px", color: "#909499", textDecoration: "none" }}>
-            Мои квизы
-          </Link>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#909499" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="9 18 15 12 9 6" />
-          </svg>
-          <span style={{ fontSize: "14px", fontWeight: 500, color: "#E7E8EA" }}>{editId ? (title || "Редактирование квиза") : "Новый квиз"}</span>
-        </div>
-
-        <div style={{ display: "flex", gap: "8px" }}>
+        <div className="details-actions" style={{ display: "flex", gap: "8px" }}>
           <button
             onClick={() => handleSave(false)}
             disabled={saving || !title.trim()}
@@ -288,13 +299,13 @@ function CreateQuizPageInner() {
       </div>
 
       {/* ── Body: left form + right preview ── */}
-      <div style={{ display: "flex", height: "calc(100vh - 130px)" }}>
+      <div className="split-layout" style={{ display: "flex", height: "calc(100vh - 130px)" }}>
 
         {/* ── Left column ── */}
-        <div style={{ flex: "0 0 900px", padding: "48px 64px", display: "flex", flexDirection: "column", gap: "8px", overflowY: "auto" }}>
+        <div className="split-form-col" style={{ flex: "0 0 900px", padding: "48px 64px", display: "flex", flexDirection: "column", gap: "8px", overflowY: "auto" }}>
 
           {/* Step indicator */}
-          <div style={{ display: "flex", alignItems: "center", marginBottom: "8px" }}>
+          <div className="step-indicator" style={{ display: "flex", alignItems: "center", marginBottom: "8px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
               <div style={{
                 width: "28px", height: "28px", borderRadius: "14px", flexShrink: 0,
@@ -304,7 +315,7 @@ function CreateQuizPageInner() {
               }}>1</div>
               <span style={{ fontSize: "14px", fontWeight: 600, color: "#E7E8EA" }}>Детали квиза</span>
             </div>
-            <div style={{ width: "80px", height: "2px", background: "#363738", margin: "0 16px" }} />
+            <div className="step-connector" style={{ width: "80px", height: "2px", background: "#363738", margin: "0 16px" }} />
             <div
               onClick={() => { if (editId) router.push(`/quiz/${editId}/edit`); }}
               style={{
@@ -320,7 +331,7 @@ function CreateQuizPageInner() {
               }}>2</div>
               <span style={{ fontSize: "14px", fontWeight: 600, color: "#76787A" }}>Вопросы</span>
             </div>
-            <div style={{ width: "80px", height: "2px", background: "#363738", margin: "0 16px" }} />
+            <div className="step-connector" style={{ width: "80px", height: "2px", background: "#363738", margin: "0 16px" }} />
             <div
               onClick={() => { if (editId) router.push(`/quiz/${editId}/review`); }}
               style={{
@@ -345,7 +356,7 @@ function CreateQuizPageInner() {
             Вы можете изменить это позже. Название и категория помогут игрокам найти квиз.
           </p>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: "22px", paddingTop: "22px", width: "540px" }}>
+          <div className="form-fields" style={{ display: "flex", flexDirection: "column", gap: "22px", paddingTop: "22px", width: "540px" }}>
 
             {/* Quiz title */}
             <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
@@ -411,7 +422,7 @@ function CreateQuizPageInner() {
                 </div>
               </div>
 
-              <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "6px" }}>
+              {/* <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "6px" }}>
                 <label style={{ fontSize: "13px", fontWeight: 500, color: "#909499" }}>Видимость</label>
                 <div style={{ position: "relative" }}>
                   <select
@@ -431,7 +442,7 @@ function CreateQuizPageInner() {
                     <polyline points="6 9 12 15 18 9" />
                   </svg>
                 </div>
-              </div>
+              </div> */}
             </div>
 
             {/* Scoring */}
@@ -482,7 +493,7 @@ function CreateQuizPageInner() {
             {/* Tags */}
             <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
               <label style={{ fontSize: "13px", fontWeight: 500, color: "#909499" }}>
-                Теги <span style={{ color: "#76787A" }}>(помогают игрокам найти квиз)</span>
+                Теги <span style={{ color: "#76787A" }}></span>
               </label>
               <TagsField tags={tags} onChange={setTags} />
             </div>
@@ -490,7 +501,7 @@ function CreateQuizPageInner() {
         </div>
 
         {/* ── Right column: live preview ── */}
-        <div style={{
+        <div className="split-preview-col" style={{
           flex: 1,
           background: "#19191A",
           borderLeft: "1px solid #363738",
@@ -508,8 +519,9 @@ function CreateQuizPageInner() {
               Предпросмотр
             </span>
 
-            <div style={{
+            <div className="preview-card" style={{
               width: "460px",
+              maxWidth: "100%",
               background: "#232324", border: "1px solid #363738", borderRadius: "12px",
               boxShadow: "0 8px 24px rgba(0,0,0,0.3), inset 0 1px 0 1px rgba(255,255,255,0.04)",
               overflow: "hidden",
@@ -670,6 +682,45 @@ function CreateQuizPageInner() {
               Игроки видят эту карточку перед входом.
             </p>
           </div>
+        </div>
+      </div>
+
+      {/* Mobile-only: save actions pinned to the bottom of the page */}
+      <div className="mobile-continue-bar" style={{ display: "none" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <button
+            onClick={() => handleSave(true)}
+            disabled={saving || !title.trim()}
+            style={{
+              width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+              height: 48, borderRadius: 10, border: "none",
+              background: "linear-gradient(180deg, #0077FF 0%, #005CC4 100%)",
+              boxShadow: "0 4px 16px rgba(0,119,255,0.35), inset 0 1px 0 rgba(255,255,255,0.2)",
+              color: "#E7E8EA", fontSize: 15, fontWeight: 600,
+              cursor: title.trim() ? "pointer" : "not-allowed",
+              opacity: title.trim() ? 1 : 0.5,
+              fontFamily: "Inter, sans-serif",
+            }}
+          >
+            Сохранить и продолжить
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
+            </svg>
+          </button>
+          <button
+            onClick={() => handleSave(false)}
+            disabled={saving || !title.trim()}
+            style={{
+              width: "100%", height: 44, borderRadius: 10,
+              background: "transparent", border: "1px solid #363738",
+              color: "#909499", fontSize: 14, fontWeight: 600,
+              cursor: title.trim() ? "pointer" : "not-allowed",
+              opacity: title.trim() ? 1 : 0.5,
+              fontFamily: "Inter, sans-serif",
+            }}
+          >
+            Сохранить черновик
+          </button>
         </div>
       </div>
 

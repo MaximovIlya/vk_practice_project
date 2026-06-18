@@ -82,7 +82,7 @@ export default async function QuizHistoryPage({ params }: { params: { id: string
     <div style={{ background: "#19191A", minHeight: "100vh", color: "#E7E8EA", fontFamily: "Inter, sans-serif" }}>
 
       {/* ── Nav ── */}
-      <nav style={{
+      <nav className="app-navbar" style={{
         position: "sticky", top: 0, zIndex: 10,
         background: "rgba(25, 25, 26, 0.85)", backdropFilter: "blur(12px)",
         borderBottom: "1px solid #363738", height: 65,
@@ -112,7 +112,7 @@ export default async function QuizHistoryPage({ params }: { params: { id: string
       </nav>
 
       {/* ── Body ── */}
-      <div style={{ maxWidth: 880, margin: "0 auto", padding: "40px 32px" }}>
+      <div className="page-body" style={{ maxWidth: 880, margin: "0 auto", padding: "40px 32px" }}>
 
         {/* Breadcrumb */}
         <Link href="/dashboard/quizzes" style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, color: "#909499", textDecoration: "none", marginBottom: 20 }}>

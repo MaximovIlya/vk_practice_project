@@ -152,7 +152,7 @@ export default function QuizLibrary({ quizzes, showSearch = false, autoFocusSear
         </div>
 
         {showSearch && (
-          <div style={{ position: "relative", width: 300 }}>
+          <div className="quiz-search" style={{ position: "relative", width: 300 }}>
             <svg style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}
               width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#76787A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
@@ -187,7 +187,7 @@ export default function QuizLibrary({ quizzes, showSearch = false, autoFocusSear
             )}
           </div>
         ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "15px" }}>
+          <div className="quiz-card-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "15px" }}>
             {filtered.map((quiz) => (
               <div key={quiz.id}
                 onClick={() => router.push(`/quiz/${quiz.id}/history`)}

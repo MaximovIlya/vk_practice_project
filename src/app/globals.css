@@ -32,3 +32,176 @@ select:focus, select:focus-visible {
     text-wrap: balance;
   }
 }
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Responsive overrides (organizer screens).
+
+   The app is built with inline styles, which always win over external CSS.
+   To make them responsive we tag key containers with classNames and override
+   the relevant properties here with `!important` inside media queries. Desktop
+   keeps the inline defaults; these rules only kick in on narrow viewports.
+   ────────────────────────────────────────────────────────────────────────── */
+
+/* Tablet / narrow desktop: collapse two-column layouts, shrink dense grids. */
+@media (max-width: 980px) {
+  .quiz-card-grid { grid-template-columns: repeat(2, 1fr) !important; }
+
+  /* Quiz create: form + live preview stack vertically. */
+  .split-layout { flex-direction: column !important; height: auto !important; }
+  .split-form-col { flex: 1 1 auto !important; padding: 32px 24px !important; }
+  .split-preview-col {
+    border-left: none !important;
+    border-top: 1px solid #363738 !important;
+    padding: 32px 24px !important;
+  }
+  .form-fields { width: 100% !important; }
+  .preview-card { width: 100% !important; }
+
+  /* Review: checklist + preview/CTA stack vertically. */
+  .review-layout { flex-direction: column !important; }
+  .review-side { width: 100% !important; }
+
+  /* Quiz editor: three panes stack into one scrolling column. */
+  .edit-root { height: auto !important; overflow: visible !important; }
+  .edit-body { flex-direction: column !important; overflow: visible !important; }
+  .edit-list {
+    width: 100% !important;
+    border-right: none !important;
+    border-bottom: 1px solid #363738 !important;
+    max-height: 240px !important;
+  }
+  .edit-main { width: 100% !important; overflow: visible !important; }
+  .edit-settings {
+    width: 100% !important;
+    border-left: none !important;
+    border-top: 1px solid #363738 !important;
+  }
+}
+
+/* Phone: single-column grids, tighter padding, wrapping headers. */
+@media (max-width: 640px) {
+  .app-navbar { padding-left: 14px !important; padding-right: 14px !important; height: 56px !important; }
+  .nav-role-badge { display: none !important; }
+
+  /* Never let a stray wide element create a horizontal scroll — that is what
+     makes the page padding look lopsided (left margin ≠ right margin). */
+  body { overflow-x: clip; }
+
+  /* Shrink the nav links / buttons so the bar fits a phone width. */
+  .app-navbar > div { gap: 12px !important; }
+  .app-navbar a,
+  .app-navbar button {
+    font-size: 13px !important;
+    padding: 6px 9px !important;
+    height: auto !important;
+    gap: 6px !important;
+    white-space: nowrap !important;
+  }
+  /* On phones the user pill collapses to just the avatar + chevron — the name
+     is the widest part and pushes the bar past the viewport edge. */
+  .app-navbar .nav-user-pill { padding: 5px 8px 5px 5px !important; gap: 6px !important; }
+  .app-navbar .nav-user-name { display: none !important; }
+
+  .dash-main { padding: 24px 16px !important; }
+  .page-body { padding: 24px 16px !important; }
+  /* Stack the sub-header vertically: breadcrumb on top, actions (save status +
+     continue) on their own row below — they never fit on one phone line. */
+  .subheader-bar {
+    padding: 14px 16px !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+  }
+
+  .quiz-card-grid { grid-template-columns: 1fr !important; }
+  .stat-card-grid { grid-template-columns: 1fr !important; }
+  /* Stat cards read tighter on a phone — trim the inner padding. */
+  .stat-card-grid > div { padding: 18px !important; }
+
+  .dash-header-row { flex-direction: column !important; align-items: flex-start !important; gap: 16px; }
+  /* The 36px greeting is oversized on a phone. */
+  .dash-header-row h1 { font-size: 26px !important; line-height: 1.15 !important; }
+
+  .quiz-search { width: 100% !important; }
+
+  /* Stepper: keep the labels but make everything fit without a scroll. Each
+     step stacks vertically (circle on top, label centered below), and the
+     connectors are pulled up to line up with the circles. */
+  .step-indicator {
+    overflow-x: visible !important;
+    justify-content: center !important;
+    align-items: flex-start !important;
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+  .step-indicator > a,
+  .step-indicator > div:not(.step-connector) {
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 6px !important;
+    width: 72px !important;
+    flex-shrink: 0 !important;
+  }
+  .step-indicator span {
+    font-size: 11px !important;
+    line-height: 1.2 !important;
+    text-align: center !important;
+    max-width: 72px;
+  }
+  .step-connector { width: 12px !important; margin: 13px 5px 0 !important; }
+
+  .split-form-col { padding: 24px 16px !important; }
+  .split-preview-col { padding: 24px 16px !important; }
+
+  /* ── Page toolbars (create / edit / review) ──
+     These bars overlap their breadcrumb on a phone. Let them wrap and shrink
+     their buttons instead. The create/edit pages use `.subheader-bar` (which
+     already wraps above); the review page uses its own sticky header. */
+  .review-header {
+    height: auto !important;
+    min-height: 56px;
+    flex-wrap: wrap !important;
+    padding: 8px 14px !important;
+    row-gap: 8px;
+  }
+  /* Drop the review action buttons onto their own full-width row. */
+  .review-actions { flex: 1 1 100% !important; justify-content: flex-start !important; }
+
+  /* On phones the continue action leaves the sub-header (which then holds only
+     the save indicator) and becomes a full-width bar pinned to the page bottom. */
+  .subheader-actions { justify-content: flex-start !important; }
+  .subheader-continue { display: none !important; }
+  /* Details & questions screens: the action buttons move to the bottom bar and
+     the quiz name / save indicator are dropped, leaving the sub-header empty on
+     a phone — so hide the whole bar. */
+  .details-actions { display: none !important; }
+  .details-subheader { display: none !important; }
+  .mobile-continue-bar {
+    display: block !important;
+    position: sticky;
+    bottom: 0;
+    z-index: 20;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+    background: rgba(25, 25, 26, 0.95);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-top: 1px solid #363738;
+  }
+
+  .review-header a, .review-header button,
+  .subheader-bar a, .subheader-bar button {
+    font-size: 12px !important;
+    padding: 7px 12px !important;
+    height: auto !important;
+  }
+
+  /* Editor meta row (Вопрос N · тип ответа · Удалить) wraps instead of colliding. */
+  .editor-meta { flex-wrap: wrap !important; gap: 12px !important; }
+
+  /* Answer rows: hide the "Правильный/Отметить верным" caption so the toggle and
+     delete icon stay inside the row and the text input keeps room to type. */
+  .answer-correct-label { display: none !important; }
+
+  /* More room for the question editor on a phone. */
+  .edit-main { padding: 20px 16px !important; }
+}

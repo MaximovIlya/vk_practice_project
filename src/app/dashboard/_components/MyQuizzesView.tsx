@@ -34,7 +34,7 @@ function MyQuizzesInner({ user, quizzes }: Props) {
   return (
     <div style={{ background: "#19191A", minHeight: "100vh", color: "#E7E8EA", fontFamily: "Inter, sans-serif" }}>
       {/* ── Nav ── */}
-      <nav style={{
+      <nav className="app-navbar" style={{
         position: "sticky", top: 0, zIndex: 10,
         background: "rgba(25, 25, 26, 0.85)",
         backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)",
@@ -105,7 +105,7 @@ function MyQuizzesInner({ user, quizzes }: Props) {
       </nav>
 
       {/* ── Body ── */}
-      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "40px 32px" }}>
+      <div className="page-body" style={{ maxWidth: 1200, margin: "0 auto", padding: "40px 32px" }}>
         <h1 style={{ fontSize: "28px", fontWeight: 700, letterSpacing: "-0.02em", margin: "0 0 6px" }}>
           Мои квизы
         </h1>

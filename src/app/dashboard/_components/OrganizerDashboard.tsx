@@ -67,7 +67,7 @@ export default function OrganizerDashboard({ user, stats, quizzes, activeSession
     <div style={{ background: "#19191A", minHeight: "100vh", color: "#E7E8EA", fontFamily: "Inter, sans-serif" }}>
 
       {/* ── Nav ── */}
-      <nav style={{
+      <nav className="app-navbar" style={{
         position: "sticky",
         top: 0,
         zIndex: 10,
@@ -125,7 +125,7 @@ export default function OrganizerDashboard({ user, stats, quizzes, activeSession
 
         {/* Right: role badge + user pill */}
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <div style={{
+          <div className="nav-role-badge" style={{
             padding: "4px 10px",
             borderRadius: "999px",
             background: "rgba(0,119,255,0.15)",
@@ -142,6 +142,7 @@ export default function OrganizerDashboard({ user, stats, quizzes, activeSession
           <div style={{ position: "relative" }}>
             <div
               onClick={() => setMenuOpen((v) => !v)}
+              className="nav-user-pill"
               style={{
                 display: "flex", alignItems: "center", gap: "10px",
                 padding: "7px 15px 7px 7px",
@@ -162,7 +163,7 @@ export default function OrganizerDashboard({ user, stats, quizzes, activeSession
               }}>
                 {initials}
               </div>
-              <span style={{ fontSize: "14px", fontWeight: 500, color: "#E7E8EA" }}>{user.name}</span>
+              <span className="nav-user-name" style={{ fontSize: "14px", fontWeight: 500, color: "#E7E8EA" }}>{user.name}</span>
               <svg
                 width="14" height="14" viewBox="0 0 24 24" fill="none"
                 stroke="#76787A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
@@ -216,7 +217,7 @@ export default function OrganizerDashboard({ user, stats, quizzes, activeSession
       </nav>
 
       {/* ── Main content ── */}
-      <div style={{ padding: "40px 48px", display: "flex", flexDirection: "column", gap: "16px" }}>
+      <div className="dash-main" style={{ padding: "40px 48px", display: "flex", flexDirection: "column", gap: "16px" }}>
 
         {/* ── Active session banner ── */}
         {activeSession && (
@@ -251,7 +252,7 @@ export default function OrganizerDashboard({ user, stats, quizzes, activeSession
         )}
 
         {/* ── Header row ── */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+        <div className="dash-header-row" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
           <div>
             <div style={{
               display: "inline-flex",
@@ -297,7 +298,7 @@ export default function OrganizerDashboard({ user, stats, quizzes, activeSession
         </div>
 
         {/* ── Stats row (4 columns) ── */}
-        <div style={{
+        <div className="stat-card-grid" style={{
           display: "grid",
           gridTemplateColumns: "repeat(3, 1fr)",
           gap: "16px",
