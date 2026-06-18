@@ -157,7 +157,7 @@ function CreateQuizPageInner() {
   }
 
   return (
-    <div style={{ background: "#19191A", minHeight: "100vh", color: "#E7E8EA", fontFamily: "Inter, sans-serif" }}>
+    <div className="create-root" style={{ background: "#19191A", height: "100vh", display: "flex", flexDirection: "column", overflow: "hidden", color: "#E7E8EA", fontFamily: "Inter, sans-serif" }}>
 
       {/* ── Nav ── */}
       <nav className="app-navbar" style={{
@@ -298,56 +298,51 @@ function CreateQuizPageInner() {
         </div>
       </div>
 
+      {/* ── Step indicator ── */}
+      <div className="step-indicator" style={{
+        flexShrink: 0,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        padding: "10px 20px",
+        background: "#19191A",
+      }}>
+        {/* Step 1 — current */}
+        <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+          <div style={{ width: 26, height: 26, borderRadius: "50%", flexShrink: 0, background: "linear-gradient(180deg, #0077FF, #005CC4)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, color: "#fff" }}>1</div>
+          <span style={{ fontSize: 13, fontWeight: 600, color: "#E7E8EA" }}>Детали квиза</span>
+        </div>
+        <div className="step-connector" style={{ width: 56, height: 2, background: "#363738", margin: "0 14px" }} />
+        {/* Step 2 */}
+        {editId ? (
+          <Link href={`/quiz/${editId}/edit`} style={{ display: "flex", alignItems: "center", gap: 9, textDecoration: "none" }}>
+            <div style={{ width: 26, height: 26, borderRadius: "50%", flexShrink: 0, background: "#2C2D2E", border: "1px solid #363738", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, color: "#909499" }}>2</div>
+            <span style={{ fontSize: 13, fontWeight: 600, color: "#909499" }}>Вопросы</span>
+          </Link>
+        ) : (
+          <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+            <div style={{ width: 26, height: 26, borderRadius: "50%", flexShrink: 0, background: "#2C2D2E", border: "1px solid #363738", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, color: "#909499" }}>2</div>
+            <span style={{ fontSize: 13, fontWeight: 600, color: "#909499" }}>Вопросы</span>
+          </div>
+        )}
+        <div className="step-connector" style={{ width: 56, height: 2, background: "#363738", margin: "0 14px" }} />
+        {/* Step 3 */}
+        {editId ? (
+          <Link href={`/quiz/${editId}/review`} style={{ display: "flex", alignItems: "center", gap: 9, textDecoration: "none" }}>
+            <div style={{ width: 26, height: 26, borderRadius: "50%", flexShrink: 0, background: "#2C2D2E", border: "1px solid #363738", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, color: "#909499" }}>3</div>
+            <span style={{ fontSize: 13, fontWeight: 600, color: "#909499" }}>Проверка и публикация</span>
+          </Link>
+        ) : (
+          <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+            <div style={{ width: 26, height: 26, borderRadius: "50%", flexShrink: 0, background: "#2C2D2E", border: "1px solid #363738", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, color: "#909499" }}>3</div>
+            <span style={{ fontSize: 13, fontWeight: 600, color: "#909499" }}>Проверка и публикация</span>
+          </div>
+        )}
+      </div>
+
       {/* ── Body: left form + right preview ── */}
-      <div className="split-layout" style={{ display: "flex", height: "calc(100vh - 130px)" }}>
+      <div className="split-layout" style={{ display: "flex", flex: 1, overflow: "hidden" }}>
 
         {/* ── Left column ── */}
-        <div className="split-form-col" style={{ flex: "0 0 900px", padding: "48px 64px", display: "flex", flexDirection: "column", gap: "8px", overflowY: "auto" }}>
-
-          {/* Step indicator */}
-          <div className="step-indicator" style={{ display: "flex", alignItems: "center", marginBottom: "8px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <div style={{
-                width: "28px", height: "28px", borderRadius: "14px", flexShrink: 0,
-                background: "linear-gradient(180deg, #0077FF, #005CC4)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: "13px", fontWeight: 700, color: "#fff",
-              }}>1</div>
-              <span style={{ fontSize: "14px", fontWeight: 600, color: "#E7E8EA" }}>Детали квиза</span>
-            </div>
-            <div className="step-connector" style={{ width: "80px", height: "2px", background: "#363738", margin: "0 16px" }} />
-            <div
-              onClick={() => { if (editId) router.push(`/quiz/${editId}/edit`); }}
-              style={{
-                display: "flex", alignItems: "center", gap: "10px",
-                cursor: editId ? "pointer" : "default",
-              }}
-            >
-              <div style={{
-                width: "28px", height: "28px", borderRadius: "14px", flexShrink: 0,
-                background: "#2C2D2E", border: "1px solid #363738",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: "13px", fontWeight: 700, color: "#76787A",
-              }}>2</div>
-              <span style={{ fontSize: "14px", fontWeight: 600, color: "#76787A" }}>Вопросы</span>
-            </div>
-            <div className="step-connector" style={{ width: "80px", height: "2px", background: "#363738", margin: "0 16px" }} />
-            <div
-              onClick={() => { if (editId) router.push(`/quiz/${editId}/review`); }}
-              style={{
-                display: "flex", alignItems: "center", gap: "10px",
-                cursor: editId ? "pointer" : "default",
-              }}
-            >
-              <div style={{
-                width: "28px", height: "28px", borderRadius: "14px", flexShrink: 0,
-                background: "#2C2D2E", border: "1px solid #363738",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: "13px", fontWeight: 700, color: "#76787A",
-              }}>3</div>
-              <span style={{ fontSize: "14px", fontWeight: 600, color: "#76787A" }}>Проверка и публикация</span>
-            </div>
-          </div>
+        <div className="split-form-col" style={{ flex: "0 0 900px", padding: "32px 64px", display: "flex", flexDirection: "column", gap: "8px", overflowY: "auto" }}>
 
           <h1 style={{ fontSize: "32px", fontWeight: 700, letterSpacing: "-0.02em", margin: "0 0 4px" }}>
             Расскажите о квизе

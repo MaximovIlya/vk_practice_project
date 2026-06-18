@@ -65,6 +65,8 @@ const DIFFICULTY_COLORS: Record<string, string> = {
   "Сложно": "#E64646",
 };
 
+const reviewQuizCache = new Map<string, Quiz>();
+
 type Issue = { questionIdx: number; message: string };
 
 function validateQuiz(quiz: Quiz): Issue[] {
@@ -94,15 +96,16 @@ export default function ReviewPage() {
   const params = useParams<{ id: string }>();
   const { data: session } = useSession();
 
-  const [quiz, setQuiz] = useState<Quiz | null>(null);
-  const [loading, setLoading] = useState(true);
+  const cached = params.id ? reviewQuizCache.get(params.id) : undefined;
+  const [quiz, setQuiz] = useState<Quiz | null>(cached ?? null);
+  const [loading, setLoading] = useState(!cached);
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     if (!params.id) return;
     fetch(`/api/quiz/${params.id}`)
       .then((r) => r.json())
-      .then((data) => { setQuiz(data); setLoading(false); });
+      .then((data) => { reviewQuizCache.set(params.id, data); setQuiz(data); setLoading(false); });
   }, [params.id]);
 
   if (loading) {
@@ -177,9 +180,9 @@ export default function ReviewPage() {
             ] as const).map(({ label, href }) => (
               <Link key={label} href={href} style={{
                 fontSize: "14px", fontWeight: 500, cursor: "pointer",
-                color: label === "Мои квизы" ? "#E7E8EA" : "#909499",
+                color: "#909499",
                 padding: "8px 14px", borderRadius: "6px", textDecoration: "none",
-                background: label === "Мои квизы" ? "rgba(255,255,255,0.05)" : "transparent",
+                background:  "transparent",
               }}>
                 {label}
               </Link>
@@ -245,23 +248,7 @@ export default function ReviewPage() {
         </div>
       </nav>
 
-      {/* ── Sub-header: breadcrumb ── */}
-      <div className="subheader-bar" style={{
-        flexShrink: 0,
-        borderBottom: "1px solid #363738",
-        display: "flex", alignItems: "center", justifyContent: "flex-start",
-        padding: "20px 48px 21px",
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
-          <Link href="/dashboard/quizzes" style={{ fontSize: "14px", color: "#909499", textDecoration: "none", flexShrink: 0 }}>
-            Мои квизы
-          </Link>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#909499" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-            <polyline points="9 18 15 12 9 6" />
-          </svg>
-          <span style={{ fontSize: "14px", fontWeight: 500, color: "#E7E8EA", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{quiz.title}</span>
-        </div>
-      </div>
+      
 
       {/* ── Step indicator ── */}
       <div className="step-indicator" style={{

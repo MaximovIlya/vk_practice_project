@@ -29,13 +29,16 @@ type Quiz = {
 
 const ANS_BG = ["#4DC4FF", "#FFA000", "#4BB34B", "#E64646"];
 
+const editQuizCache = new Map<string, Quiz>();
+
 export default function EditQuestionsPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const { data: session } = useSession();
 
-  const [quiz, setQuiz] = useState<Quiz | null>(null);
-  const [loading, setLoading] = useState(true);
+  const cached = params.id ? editQuizCache.get(params.id) : undefined;
+  const [quiz, setQuiz] = useState<Quiz | null>(cached ?? null);
+  const [loading, setLoading] = useState(!cached);
   const [selectedIdx, setSelectedIdx] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -50,7 +53,7 @@ export default function EditQuestionsPage() {
     if (!params.id) return;
     fetch(`/api/quiz/${params.id}`)
       .then((r) => r.json())
-      .then((data) => { setQuiz(data); setLoading(false); });
+      .then((data) => { editQuizCache.set(params.id, data); setQuiz(data); setLoading(false); });
   }, [params.id]);
 
   useEffect(() => {
@@ -78,7 +81,9 @@ export default function EditQuestionsPage() {
     if (!quiz || !selectedQuestion) return;
     const updated: Question = { ...selectedQuestion, ...patch };
     const questions = quiz.questions.map((q, i) => (i === selectedIdx ? updated : q));
-    setQuiz({ ...quiz, questions });
+    const newQuiz = { ...quiz, questions };
+    setQuiz(newQuiz);
+    editQuizCache.set(params.id, newQuiz);
     autoSave(updated);
   }
 
@@ -121,7 +126,9 @@ export default function EditQuestionsPage() {
     });
     const q: Question = await res.json();
     const newQuestions = [...quiz.questions, { ...q, answers: [], tags: q.tags ?? [], timeLimit: q.timeLimit ?? 30, points: q.points ?? 1000 }];
-    setQuiz({ ...quiz, questions: newQuestions });
+    const newQuiz = { ...quiz, questions: newQuestions };
+    setQuiz(newQuiz);
+    editQuizCache.set(params.id, newQuiz);
     setSelectedIdx(newQuestions.length - 1);
   }
 
@@ -129,7 +136,9 @@ export default function EditQuestionsPage() {
     if (!quiz || !selectedQuestion) return;
     await fetch(`/api/quiz/${params.id}/questions/${selectedQuestion.id}`, { method: "DELETE" });
     const questions = quiz.questions.filter((_, i) => i !== selectedIdx);
-    setQuiz({ ...quiz, questions });
+    const newQuiz = { ...quiz, questions };
+    setQuiz(newQuiz);
+    editQuizCache.set(params.id, newQuiz);
     setSelectedIdx(Math.max(0, selectedIdx - 1));
   }
 
@@ -198,9 +207,9 @@ export default function EditQuestionsPage() {
             ] as const).map(({ label, href }) => (
               <Link key={label} href={href} style={{
                 fontSize: "14px", fontWeight: 500, cursor: "pointer",
-                color: label === "Мои квизы" ? "#E7E8EA" : "#909499",
+                color: "#909499",
                 padding: "8px 14px", borderRadius: "6px", textDecoration: "none",
-                background: label === "Мои квизы" ? "rgba(255,255,255,0.05)" : "transparent",
+                background: "transparent",
               }}>
                 {label}
               </Link>

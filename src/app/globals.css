@@ -46,6 +46,9 @@ select:focus, select:focus-visible {
 @media (max-width: 980px) {
   .quiz-card-grid { grid-template-columns: repeat(2, 1fr) !important; }
 
+  /* Quiz create: outer root needs to scroll on tablet/phone. */
+  .create-root { height: auto !important; overflow: visible !important; }
+
   /* Quiz create: form + live preview stack vertically. */
   .split-layout { flex-direction: column !important; height: auto !important; }
   .split-form-col { flex: 1 1 auto !important; padding: 32px 24px !important; }
