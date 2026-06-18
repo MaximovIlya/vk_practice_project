@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useSession } from "next-auth/react";
 import { getSocket, disconnectSocket } from "@/lib/socket";
 import type { Player, AnswerVotes } from "@/types/socket";
 import { plural } from "@/lib/plural";
@@ -38,8 +37,6 @@ export default function RunQuizPage() {
   const params       = useParams<{ id: string }>();
   const router       = useRouter();
   const searchParams = useSearchParams();
-  const { data: session } = useSession();
-
   const [quiz,        setQuiz]        = useState<Quiz | null>(null);
   const [quizSession, setQuizSession] = useState<QuizSession | null>(null);
   const [players,     setPlayers]     = useState<Player[]>([]);
@@ -182,17 +179,6 @@ export default function RunQuizPage() {
   const startQuiz = useCallback(() => {
     if (!quizSession) return;
     getSocket().emit("start-quiz", { sessionId: quizSession.id });
-  }, [quizSession]);
-
-  const nextQuestion = useCallback(() => {
-    if (!quizSession) return;
-    getSocket().emit("next-question", { sessionId: quizSession.id });
-    setPhase("ACTIVE");
-  }, [quizSession]);
-
-  const endQuestion = useCallback(() => {
-    if (!quizSession) return;
-    getSocket().emit("end-question", { sessionId: quizSession.id });
   }, [quizSession]);
 
   // After the final question's reveal: tell the server to finish the quiz. The
@@ -452,8 +438,6 @@ export default function RunQuizPage() {
         {/* ══ ACTIVE / REVEAL ══ */}
         {(phase === "ACTIVE" || phase === "REVEAL") && currentQuestion && (() => {
           const totalVotes = Object.values(votes).reduce((s, v) => s + v, 0) || 1;
-          const correctCount = Object.entries(votes).filter(([id]) => correctIds.includes(id)).reduce((s, [, v]) => s + v, 0);
-          const accuracy = totalAnswered > 0 ? Math.round(correctCount / totalAnswered * 100) : 0;
           const pct = currentQuestion.timeLimit > 0 ? (timeLeft / currentQuestion.timeLimit) * 100 : 0;
           const timerColor = pct > 50 ? "#4BB34B" : pct > 20 ? "#FFA000" : "#E64646";
 

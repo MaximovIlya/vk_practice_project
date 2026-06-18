@@ -3,20 +3,12 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { signOut } from "next-auth/react";
 import QuizLibrary, { type LibraryQuiz } from "./QuizLibrary";
 
 type Props = {
   user: { name: string; role: string };
   quizzes: LibraryQuiz[];
 };
-
-function getInitials(name: string) {
-  const parts = name.trim().split(" ");
-  return parts.length >= 2
-    ? parts[0][0].toUpperCase() + parts[parts.length - 1][0].toUpperCase()
-    : parts[0][0].toUpperCase();
-}
 
 export default function MyQuizzesView(props: Props) {
   return (
@@ -26,10 +18,9 @@ export default function MyQuizzesView(props: Props) {
   );
 }
 
-function MyQuizzesInner({ user, quizzes }: Props) {
+function MyQuizzesInner({ quizzes }: Props) {
   const searchParams = useSearchParams();
   const focusSearch = searchParams.get("focus") === "1";
-  const initials = getInitials(user.name);
 
   return (
     <div style={{ background: "#19191A", minHeight: "100vh", color: "#E7E8EA", fontFamily: "Inter, sans-serif" }}>

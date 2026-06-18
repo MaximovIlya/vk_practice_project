@@ -16,11 +16,6 @@ const CATEGORY_LABELS: Record<string, string> = {
   History: "История",
   Geography: "География",
 };
-const VISIBILITIES = ["Public", "Private · invite only"];
-const VISIBILITY_LABELS: Record<string, string> = {
-  "Public": "Публично",
-  "Private · invite only": "Приватно · только по приглашению",
-};
 const SCORING_OPTIONS = [
   { id: "standard",  label: "Стандарт",        desc: "Очки только за правильность" },
   { id: "speed",     label: "Бонус за скорость", desc: "Быстрые ответы дают больше" },
@@ -85,7 +80,6 @@ function CreateQuizPageInner() {
   const [title, setTitle] = useState(cached?.title ?? "");
   const [description, setDescription] = useState(cached?.description ?? "");
   const [category, setCategory] = useState(cached?.category ?? "Engineering");
-  const [visibility, setVisibility] = useState("Private · invite only");
   const [scoring, setScoring] = useState(cached?.scoring ?? "standard");
   const [difficulty, setDifficulty] = useState(cached?.difficulty ?? "Средне");
   const [tags, setTags] = useState<string[]>(cached?.tags ?? []);

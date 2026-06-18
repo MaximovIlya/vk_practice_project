@@ -42,7 +42,7 @@ export default function PlayPage() {
   const [qIdx,         setQIdx]         = useState(0);
   const [selectedIds,  setSelectedIds]  = useState<string[]>([]);
   const [submitted,    setSubmitted]    = useState(false);
-  const [votes,        setVotes]        = useState<AnswerVotes>({});
+  const [,             setVotes]        = useState<AnswerVotes>({});
   const [correctIds,   setCorrectIds]   = useState<string[]>([]);
   const [timeLeft,     setTimeLeft]     = useState(0);
   const [players,      setPlayers]      = useState<{ userId: string; name: string; score: number }[]>([]);

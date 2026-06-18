@@ -18,7 +18,7 @@ export async function PUT(req: Request, { params }: Params) {
 
   const { text, type, imageUrl, answers, tags, timeLimit, points } = await req.json();
 
-  const question = await prisma.question.update({
+  await prisma.question.update({
     where: { id: params.questionId },
     data: {
       text: text ?? undefined,
