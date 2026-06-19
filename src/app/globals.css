@@ -73,6 +73,13 @@ select:focus, select:focus-visible {
   .run-leaderboard { display: none !important; }
   .run-timer-section { padding: 16px 24px 0 !important; }
 
+  /* Participant dashboard: join card stacks on tablet. */
+  .part-join-card { flex-direction: column !important; gap: 24px !important; }
+  .part-join-form { width: 100% !important; }
+
+  /* Play page: less side padding on tablet. */
+  .play-active, .play-reveal { padding: 20px 24px 28px !important; }
+
   /* Results page: stack podium + leaderboard vertically on tablet. */
   .res-subheader { padding: 20px 24px !important; }
   .res-body { grid-template-columns: 1fr !important; overflow: auto !important; padding: 0 24px 40px !important; }
@@ -93,6 +100,9 @@ select:focus, select:focus-visible {
     border-top: 1px solid #363738 !important;
   }
 }
+
+.part-history-row { cursor: pointer; transition: background 0.1s; }
+.part-history-row:hover { background: rgba(255,255,255,0.04); }
 
 /* Phone: single-column grids, tighter padding, wrapping headers. */
 @media (max-width: 640px) {
@@ -234,10 +244,7 @@ select:focus, select:focus-visible {
   .run-answer-vote { font-size: 18px !important; }
 
   /* Results page — compact nav, centered subheader, equal buttons, shrunk podium */
-  .res-nav { padding: 0 16px !important; height: 56px !important; }
-  .res-nav-links { display: none !important; }
-  .res-role-badge { display: none !important; }
-  .res-user-name { display: none !important; }
+  .res-nav { padding: 0 14px !important; }
   .res-subheader {
     padding: 16px 16px !important;
     flex-direction: column !important;
@@ -260,11 +267,54 @@ select:focus, select:focus-visible {
   .res-podium-sub { display: none !important; }
   .res-podium-rank { font-size: 32px !important; }
   .res-podium-score { font-size: 13px !important; }
-  .res-podium-pillar { max-height: 110px !important; padding-top: 12px !important; }
+  .res-podium-pillar { padding-top: 12px !important; }
+  .res-podium-pillar-1 { height: 150px !important; }
+  .res-podium-pillar-2 { height: 110px !important; }
+  .res-podium-pillar-3 { height: 80px !important; }
   /* Leaderboard: hide "Правильно" column, compress rank/score */
   .res-lb-correct { display: none !important; }
   .res-lb-header { grid-template-columns: 32px 1fr 64px !important; padding: 8px 12px !important; }
   .res-lb-row { grid-template-columns: 32px 1fr 64px !important; padding: 10px 12px !important; }
+
+  /* Dashboard: shorten "Вернуться в квиз" → "Вернуться" on phone */
+  .back-to-quiz-suffix { display: none !important; }
+
+  /* ── Participant dashboard ── */
+  .part-join-card { padding: 28px 20px !important; }
+  .part-active-card { flex-direction: column !important; padding: 28px 20px !important; gap: 16px !important; align-items: flex-start !important; }
+  .part-active-btn { width: 100% !important; }
+  .part-code-inputs { gap: 6px !important; }
+  .part-code-input { width: 40px !important; height: 46px !important; font-size: 22px !important; border-radius: 8px !important; }
+  .part-history-meta { flex-direction: column !important; align-items: flex-start !important; gap: 12px !important; }
+  .part-tabs { flex-wrap: wrap !important; }
+  .part-history-host { display: none !important; }
+  .part-history-date { display: none !important; }
+  .part-history-header { grid-template-columns: 1.6fr 0.7fr 0.7fr !important; padding: 10px 12px !important; }
+  .part-history-row { grid-template-columns: 1.6fr 0.7fr 0.7fr !important; padding: 12px 12px !important; }
+  .part-history-row:hover { background: rgba(255,255,255,0.04) !important; }
+
+  /* ── Play page ── */
+  .play-header { padding: 0 16px !important; height: 52px !important; }
+  .play-user-name { display: none !important; }
+  .play-waiting { padding: 24px 16px !important; }
+  .play-active, .play-reveal { padding: 16px 16px 24px !important; }
+  .play-question-card { padding: 20px 20px !important; }
+  .play-question-text { font-size: 22px !important; }
+  .play-answer-grid { grid-template-columns: 1fr !important; gap: 10px !important; }
+  .play-answer-tile { min-height: 60px !important; padding: 14px 14px 14px 62px !important; font-size: 16px !important; }
+  .play-answer-letter { width: 36px !important; height: 36px !important; left: 12px !important; font-size: 14px !important; border-radius: 8px !important; }
+  .play-result-strip { flex-direction: column !important; gap: 10px !important; }
+  .play-finished-rank { font-size: 48px !important; }
+  .play-stat-cards { flex-wrap: wrap !important; }
+  .play-stat-cards > div { flex: 1 !important; min-width: 88px !important; padding: 12px !important; }
+  .play-finished-btns { flex-direction: column !important; align-items: stretch !important; }
+  .play-finished-btns > button { width: 100% !important; }
+
+  /* Play page waiting room — shrink the quiz card so it fits phone screen */
+  .play-wait-inner { padding-top: 8px !important; }
+  .play-wait-card { margin-bottom: 16px !important; }
+  .play-wait-cover { height: 130px !important; margin: 12px 12px 0 !important; }
+  .play-wait-hint { font-size: 12px !important; white-space: nowrap !important; }
 
   /* My quizzes: hide body create button on mobile (bottom bar takes over) */
   .myquizzes-create-btn { display: none !important; }

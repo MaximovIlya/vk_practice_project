@@ -266,7 +266,7 @@ export default function ReviewPage() {
           <div style={{ width: 26, height: 26, borderRadius: "50%", flexShrink: 0, background: "#2C2D2E", border: "1px solid #363738", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, color: "#909499" }}>2</div>
           <span style={{ fontSize: 13, fontWeight: 600, color: "#909499" }}>Вопросы</span>
         </Link>
-        <div className="step-connector" style={{ width: 56, height: 2, background: "#0077FF", margin: "0 14px" }} />
+        <div className="step-connector" style={{ width: 56, height: 2, background: "#363738", margin: "0 14px" }} />
         <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
           <div style={{ width: 26, height: 26, borderRadius: "50%", flexShrink: 0, background: "linear-gradient(180deg, #0077FF, #005CC4)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, color: "#fff" }}>3</div>
           <span style={{ fontSize: 13, fontWeight: 600, color: "#E7E8EA" }}>Проверка и публикация</span>

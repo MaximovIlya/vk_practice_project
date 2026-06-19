@@ -149,7 +149,9 @@ export default async function DashboardPage() {
     const rank = sp.session.players.filter((p) => p.score > sp.score).length + 1;
     return {
       id: sp.id,
+      sessionId: sp.session.id,
       quizTitle: sp.session.quiz.title,
+      coverImageUrl: sp.session.quiz.coverImageUrl ?? null,
       hostName: sp.session.quiz.author.name,
       date: sp.joinedAt.toISOString(),
       score: sp.score,

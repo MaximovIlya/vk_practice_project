@@ -253,7 +253,7 @@ export default function PlayPage() {
     <div style={{ minHeight: "100vh", background: "#19191A", fontFamily: "Inter, sans-serif", color: "#E7E8EA", display: "flex", flexDirection: "column" }}>
 
       {/* Header */}
-      <header style={{ height: 56, padding: "0 32px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #363738", flexShrink: 0 }}>
+      <header className="play-header" style={{ height: 56, padding: "0 32px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #363738", flexShrink: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div style={{ width: 28, height: 28, borderRadius: 8, background: "linear-gradient(180deg,#0077FF,#005CC4)",  display: "flex", alignItems: "center", justifyContent: "center" }}>
             <svg width="16" height="11" viewBox="8 11 20 14" fill="none">
@@ -271,7 +271,7 @@ export default function PlayPage() {
             <div style={{ width: 28, height: 28, borderRadius: "50%", background: avatarBg(myName), display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "#fff" }}>
               {initials(myName)}
             </div>
-            <span style={{ fontSize: 14, fontWeight: 500 }}>{myName}</span>
+            <span className="play-user-name" style={{ fontSize: 14, fontWeight: 500 }}>{myName}</span>
           </div>
         </div>
       </header>
@@ -284,8 +284,8 @@ export default function PlayPage() {
             {/* <div style={{ position: "absolute", width: 500, height: 500, borderRadius: "50%", background: "radial-gradient(circle,rgba(0,119,255,0.25) 0%,transparent 60%)", top: "calc(40% - 250px)", left: "calc(30% - 250px)", filter: "blur(40px)", pointerEvents: "none" }} />
             <div style={{ position: "absolute", width: 400, height: 400, borderRadius: "50%", background: "radial-gradient(circle,rgba(75,179,75,0.15) 0%,transparent 60%)", top: "calc(60% - 200px)", left: "calc(70% - 200px)", filter: "blur(40px)", pointerEvents: "none" }} /> */}
 
-            <div style={{ position: "relative", zIndex: 1, flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 48 }}>
-              <div style={{ textAlign: "center", maxWidth: 560 }}>
+            <div className="play-waiting" style={{ position: "relative", zIndex: 1, flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 48, overflowY: "auto" }}>
+              <div className="play-wait-inner" style={{ textAlign: "center", maxWidth: 560, width: "100%" }}>
 
                 {/* Quiz card */}
                 {(() => {
@@ -317,14 +317,14 @@ export default function PlayPage() {
                   const diffColor = difficultyColors[quiz.difficulty ?? ""];
                   const quizTags = quiz.tags ?? [];
                   return (
-                    <div style={{
+                    <div className="play-wait-card" style={{
                       width: 460, maxWidth: "100%", margin: "0 auto 32px",
                       borderRadius: 12, overflow: "hidden",
                       background: "#232324", border: "1px solid #363738",
                       //boxShadow: "0 8px 24px rgba(0,0,0,0.3), inset 0 1px 0 1px rgba(255,255,255,0.04)",
                     }}>
                       {/* Cover */}
-                      <div style={{
+                      <div className="play-wait-cover" style={{
                         position: "relative",
                         margin: "20px 20px 0",
                         height: 168, borderRadius: 10, overflow: "hidden",
@@ -413,7 +413,7 @@ export default function PlayPage() {
                       <div key={i} style={{ width: 6, height: 6, borderRadius: "50%", background: "#0077FF", opacity: op }} />
                     ))}
                   </div>
-                  <span style={{ fontSize: 15, color: "#909499" }}>Ждём, пока {quiz.hostName} начнёт квиз…</span>
+                  <span className="play-wait-hint" style={{ fontSize: 15, color: "#909499" }}>Ждём, пока {quiz.hostName} начнёт квиз…</span>
                 </div>
 
                 {(() => {
@@ -478,7 +478,7 @@ export default function PlayPage() {
 
         {/* ══ ACTIVE ══ */}
         {phase === "ACTIVE" && currentQuestion && (
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "24px 56px 36px" }}>
+          <div className="play-active" style={{ flex: 1, display: "flex", flexDirection: "column", padding: "24px 56px 36px" }}>
 
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
               <div style={{ display: "inline-flex", alignItems: "center", padding: "4px 12px", borderRadius: 999, background: "rgba(0,119,255,0.15)", border: "1px solid rgba(0,119,255,0.3)", fontSize: 13, fontWeight: 600, color: "#71AAEB" }}>
@@ -522,32 +522,32 @@ export default function PlayPage() {
                 style={{ display: "block", margin: "0 auto 16px", maxHeight: 260, maxWidth: "100%", borderRadius: 12, objectFit: "contain" }}
               />
             )}
-            <div style={{ background: "#232324", border: "1px solid #363738", borderRadius: 16, padding: "36px 44px", textAlign: "center", marginBottom: 24 }}>
-              <div style={{ fontSize: 36, fontWeight: 700, letterSpacing: "-0.02em", lineHeight: 1.2 }}>
+            <div className="play-question-card" style={{ background: "#232324", border: "1px solid #363738", borderRadius: 16, padding: "36px 44px", textAlign: "center", marginBottom: 24 }}>
+              <div className="play-question-text" style={{ fontSize: 36, fontWeight: 700, letterSpacing: "-0.02em", lineHeight: 1.2 }}>
                 {currentQuestion.text}
               </div>
             </div>
 
             {/* Answer tiles */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, flex: 1, alignContent: "start" }}>
+            <div className="play-answer-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, flex: 1, alignContent: "start" }}>
               {currentQuestion.answers.map((ans, ai) => {
                 const sel = selectedIds.includes(ans.id);
                 return (
-                  <div key={ans.id} onClick={() => toggleAnswer(ans.id)} style={{
+                  <div key={ans.id} onClick={() => toggleAnswer(ans.id)} className="play-answer-tile" style={{
                     position: "relative", overflow: "hidden",
                     borderRadius: 12, minHeight: 80,
                     padding: "22px 22px 22px 78px",
                     display: "flex", alignItems: "center",
                     fontSize: 18, fontWeight: 600, color: "white",
                     cursor: submitted ? "default" : "pointer",
-                    border: "1px solid rgba(255,255,255,0.08)",
+                    border: sel ? "3px solid white" : "1px solid rgba(255,255,255,0.08)",
                     background: ANS_GRADIENTS[ai % 4],
-                    boxShadow: sel ? "0 0 0 3px white, 0 0 30px rgba(255,255,255,0.3)" : "none",
+                    boxShadow: sel ? "inset 0 0 24px rgba(255,255,255,0.15)" : "none",
                     transform: sel ? "translateY(-2px)" : "none",
                     filter: submitted && !sel ? "grayscale(0.5) brightness(0.6)" : "none",
-                    transition: "box-shadow 0.15s, transform 0.15s, filter 0.15s",
+                    transition: "box-shadow 0.15s, transform 0.15s, filter 0.15s, border-color 0.15s",
                   }}>
-                    <div style={{ position: "absolute", left: 18, top: "50%", transform: "translateY(-50%)", width: 44, height: 44, borderRadius: 10, background: "rgba(255,255,255,0.18)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 800 }}>
+                    <div className="play-answer-letter" style={{ position: "absolute", left: 18, top: "50%", transform: "translateY(-50%)", width: 44, height: 44, borderRadius: 10, background: "rgba(255,255,255,0.18)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 800 }}>
                       {String.fromCharCode(65 + ai)}
                     </div>
                     <span>{ans.text}</span>
@@ -576,7 +576,7 @@ export default function PlayPage() {
 
         {/* ══ REVEAL ══ */}
         {phase === "REVEAL" && currentQuestion && (
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "24px 56px 36px" }}>
+          <div className="play-reveal" style={{ flex: 1, display: "flex", flexDirection: "column", padding: "24px 56px 36px" }}>
 
             {/* Top bar — mirrors the question screen, but the right side shows the result */}
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
@@ -595,7 +595,7 @@ export default function PlayPage() {
             </div>
 
             {/* Result strip — points earned + current rank (replaces the timer bar) */}
-            <div style={{ display: "flex", alignItems: "stretch", gap: 14, marginBottom: 28 }}>
+            <div className="play-result-strip" style={{ display: "flex", alignItems: "stretch", gap: 14, marginBottom: 28 }}>
               <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 12, padding: "13px 20px", background: "#232324", border: "1px solid #363738", borderRadius: 12 }}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={roundPoints > 0 ? (isCorrect ? "#4BB34B" : "#FFA000") : "#76787A"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
                 <div style={{ textAlign: "left" as const }}>
@@ -633,32 +633,32 @@ export default function PlayPage() {
                 style={{ display: "block", margin: "0 auto 16px", maxHeight: 260, maxWidth: "100%", borderRadius: 12, objectFit: "contain" }}
               />
             )}
-            <div style={{ background: "#232324", border: "1px solid #363738", borderRadius: 16, padding: "36px 44px", textAlign: "center", marginBottom: 24 }}>
-              <div style={{ fontSize: 36, fontWeight: 700, letterSpacing: "-0.02em", lineHeight: 1.2 }}>
+            <div className="play-question-card" style={{ background: "#232324", border: "1px solid #363738", borderRadius: 16, padding: "36px 44px", textAlign: "center", marginBottom: 24 }}>
+              <div className="play-question-text" style={{ fontSize: 36, fontWeight: 700, letterSpacing: "-0.02em", lineHeight: 1.2 }}>
                 {currentQuestion.text}
               </div>
             </div>
 
             {/* Answer tiles — same colorful layout; correct answer highlighted, wrong picks dimmed */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, flex: 1, alignContent: "start" }}>
+            <div className="play-answer-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, flex: 1, alignContent: "start" }}>
               {currentQuestion.answers.map((ans, ai) => {
                 const isRight = correctIds.includes(ans.id);
                 const wasSelected = selectedIds.includes(ans.id);
                 const isWrongPick = wasSelected && !isRight;
                 return (
-                  <div key={ans.id} style={{
+                  <div key={ans.id} className="play-answer-tile" style={{
                     position: "relative", overflow: "hidden",
                     borderRadius: 12, minHeight: 80,
                     padding: "22px 22px 22px 78px",
                     display: "flex", alignItems: "center",
                     fontSize: 18, fontWeight: 600, color: "white",
-                    border: isRight ? "2px solid #4BB34B" : isWrongPick ? "2px solid #E64646" : "1px solid rgba(255,255,255,0.08)",
+                    border: isRight ? "3px solid #4BB34B" : isWrongPick ? "2px solid #E64646" : "1px solid rgba(255,255,255,0.08)",
                     background: ANS_GRADIENTS[ai % 4],
                     filter: isRight ? "none" : "grayscale(0.55) brightness(0.5)",
-                    boxShadow: isRight ? "0 0 0 3px rgba(75,179,75,0.45), 0 0 30px rgba(75,179,75,0.3)" : "none",
+                    boxShadow: isRight ? "inset 0 0 24px rgba(75,179,75,0.3)" : "none",
                     transition: "filter 0.2s, box-shadow 0.2s",
                   }}>
-                    <div style={{ position: "absolute", left: 18, top: "50%", transform: "translateY(-50%)", width: 44, height: 44, borderRadius: 10, background: "rgba(255,255,255,0.18)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 800 }}>
+                    <div className="play-answer-letter" style={{ position: "absolute", left: 18, top: "50%", transform: "translateY(-50%)", width: 44, height: 44, borderRadius: 10, background: "rgba(255,255,255,0.18)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 800 }}>
                       {String.fromCharCode(65 + ai)}
                     </div>
                     <span>{ans.text}</span>
@@ -725,7 +725,7 @@ export default function PlayPage() {
                 <div style={{ fontSize: 13, color: "#FFA000", textTransform: "uppercase" as const, letterSpacing: "0.12em", fontWeight: 700, marginBottom: 10 }}>
                   Квиз завершён · отличная игра
                 </div>
-                <div style={{ fontSize: 72, fontWeight: 800, letterSpacing: "-0.03em", lineHeight: 1, marginBottom: 10 }}>
+                <div className="play-finished-rank" style={{ fontSize: 72, fontWeight: 800, letterSpacing: "-0.03em", lineHeight: 1, marginBottom: 10 }}>
                   {myRank > 0 ? myRank : "—"}
                   <span style={{ color: "#76787A", fontWeight: 400, fontSize: 36 }}> / {players.length}</span>
                 </div>
@@ -756,7 +756,7 @@ export default function PlayPage() {
                         )}
                       </div>
 
-                      <div style={{ display: "flex", gap: 12, marginBottom: 36, justifyContent: "center" }}>
+                      <div className="play-stat-cards" style={{ display: "flex", gap: 12, marginBottom: 36, justifyContent: "center" }}>
                         {stats.map(({ label, value, color }) => (
                           <div key={label} style={{ minWidth: 120, padding: "14px 18px", background: "#232324", border: "1px solid #363738", borderRadius: 12 }}>
                             <div style={{ fontSize: 10, color: "#76787A", textTransform: "uppercase" as const, letterSpacing: "0.06em", fontWeight: 600, marginBottom: 6 }}>{label}</div>
@@ -768,7 +768,7 @@ export default function PlayPage() {
                   );
                 })()}
 
-                <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
+                <div className="play-finished-btns" style={{ display: "flex", gap: 10, justifyContent: "center" }}>
                   <button
                     onClick={() => quizSession && router.push(`/results/${quizSession.id}`)}
                     style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", height: 52, padding: "0 28px", borderRadius: 10, border: "1px solid #363738", background: "#2C2D2E", color: "#E7E8EA", fontSize: 16, fontWeight: 600, cursor: "pointer", fontFamily: "Inter, sans-serif" }}

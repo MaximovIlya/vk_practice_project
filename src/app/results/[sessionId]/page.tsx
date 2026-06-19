@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import { plural } from "@/lib/plural";
 
 type Player = { rank: number; userId: string; name: string; score: number; correct: number; total: number };
@@ -40,6 +40,7 @@ export default function ResultsPage() {
   const router = useRouter();
   const [data, setData] = useState<ResultsData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     fetch(`/api/results/${params.sessionId}`)
@@ -70,33 +71,53 @@ export default function ResultsPage() {
     <div style={{ minHeight: "100vh", background: "#19191A", fontFamily: "Inter, sans-serif", color: "#E7E8EA", display: "flex", flexDirection: "column" }}>
 
       {/* NavBar */}
-      <nav className="res-nav" style={{ height: 64, padding: "0 32px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #363738", background: "rgba(25,25,26,0.85)", backdropFilter: "blur(12px)", flexShrink: 0, position: "relative", zIndex: 5 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 32 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ width: 28, height: 28, borderRadius: 8, background: "linear-gradient(180deg,#0077FF,#005CC4)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <nav className="app-navbar res-nav" style={{ position: "sticky", top: 0, zIndex: 10, background: "rgba(25,25,26,0.85)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", borderBottom: "1px solid #363738", height: "65px", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 32px", flexShrink: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "32px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <div style={{ width: "28px", height: "28px", borderRadius: "7.84px", background: "linear-gradient(180deg,#0077FF,#005CC4)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               <svg width="16" height="11" viewBox="8 11 20 14" fill="none"><path d="M10.5825 18H13.0552L14.7036 13.055L18 22.946L19.649 18H25.418" stroke="white" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
             </div>
-            <span style={{ fontWeight: 800, fontSize: 20, letterSpacing: "-0.02em" }}>Pulse</span>
+            <span style={{ fontWeight: 800, fontSize: "20px", letterSpacing: "-0.02em" }}>Pulse</span>
           </div>
-          <div className="res-nav-links" style={{ display: "flex", gap: 4 }}>
+          <div style={{ display: "flex", gap: "4px" }}>
             {(auth?.user?.role === "PARTICIPANT"
-              ? ["Главная", "История"]
-              : ["Главная", "Мои квизы"]
-            ).map(label => (
-              <a key={label} href="/dashboard" style={{ fontSize: 14, color: "#909499", padding: "8px 14px", borderRadius: 6, fontWeight: 500, textDecoration: "none", cursor: "pointer" }}>{label}</a>
+              ? [{ label: "Главная", href: "/dashboard" }]
+              : [{ label: "Главная", href: "/dashboard" }, { label: "Мои квизы", href: "/dashboard/quizzes" }]
+            ).map(({ label, href }) => (
+              <a key={label} href={href} style={{ fontSize: "14px", fontWeight: 500, color: "#909499", padding: "8px 14px", borderRadius: "6px", textDecoration: "none", background: "transparent" }}>{label}</a>
             ))}
           </div>
         </div>
         {auth?.user && (
-          <div className="res-nav-right" style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div className="res-role-badge" style={{ padding: "4px 10px", borderRadius: 999, background: "rgba(0,119,255,0.12)", fontSize: 12, fontWeight: 600, color: "#71AAEB", letterSpacing: "0.02em" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <div className="nav-role-badge" style={{ padding: "4px 10px", borderRadius: "999px", background: auth.user.role === "PARTICIPANT" ? "rgba(75,179,75,0.12)" : "rgba(0,119,255,0.15)", fontSize: "12px", fontWeight: 600, letterSpacing: "0.02em", textTransform: "uppercase", color: auth.user.role === "PARTICIPANT" ? "#4BB34B" : "#71AAEB" }}>
               {auth.user.role === "PARTICIPANT" ? "УЧАСТНИК" : "ОРГАНИЗАТОР"}
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 12px 5px 5px", borderRadius: 999, background: "#2C2D2E", border: "1px solid #363738" }}>
-              <div style={{ width: 28, height: 28, borderRadius: "50%", background: auth.user.role === "ORGANIZER" ? "linear-gradient(180deg,#0077FF,#005CC4)" : avatarBg(auth.user.name ?? ""), display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "#fff" }}>
-                {initials(auth.user.name ?? "?")}
+            <div style={{ position: "relative" }}>
+              <div onClick={() => setMenuOpen(v => !v)} className="nav-user-pill" style={{ display: "flex", alignItems: "center", gap: "10px", padding: "7px 15px 7px 7px", borderRadius: "999px", background: "#2C2D2E", border: "1px solid #363738", cursor: "pointer", userSelect: "none" }}>
+                <div style={{ width: "28px", height: "28px", borderRadius: "14px", background: auth.user.role === "ORGANIZER" ? "linear-gradient(180deg,#0077FF,#005CC4)" : avatarBg(auth.user.name ?? ""), display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: 700, color: "#fff", flexShrink: 0 }}>
+                  {initials(auth.user.name ?? "?")}
+                </div>
+                <span className="nav-user-name" style={{ fontSize: "14px", fontWeight: 500 }}>{auth.user.name}</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#76787A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: menuOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.15s" }}>
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
               </div>
-              <span className="res-user-name" style={{ fontSize: 14, fontWeight: 500 }}>{auth.user.name}</span>
+              {menuOpen && (
+                <>
+                  <div onClick={() => setMenuOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 20 }} />
+                  <div style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, zIndex: 30, minWidth: "160px", background: "#232324", border: "1px solid #363738", borderRadius: "10px", boxShadow: "0 8px 24px rgba(0,0,0,0.4)", overflow: "hidden" }}>
+                    <button onClick={() => signOut({ callbackUrl: "/login" })} style={{ display: "flex", alignItems: "center", gap: "10px", width: "100%", padding: "11px 14px", background: "none", border: "none", color: "#E64646", fontSize: "14px", fontWeight: 500, cursor: "pointer", textAlign: "left", fontFamily: "Inter, sans-serif" }}>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                        <polyline points="16 17 21 12 16 7" />
+                        <line x1="21" y1="12" x2="9" y2="12" />
+                      </svg>
+                      Выйти
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}
@@ -170,7 +191,7 @@ export default function ResultsPage() {
                   <div className="res-podium-name" style={{ fontSize: 15, fontWeight: 700, marginBottom: 2, textAlign: "center", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100%" }}>{p.name}</div>
                   <div className="res-podium-sub" style={{ fontSize: 12, color: "#76787A", marginBottom: 10, fontVariantNumeric: "tabular-nums" }}>{p.correct}/{p.total} правильно</div>
 
-                  <div className="res-podium-pillar" style={{
+                  <div className={`res-podium-pillar res-podium-pillar-${p.rank}`} style={{
                     width: "100%", height,
                     background: `linear-gradient(180deg,${color}33 0%,${color}11 100%)`,
                     border: `1px solid ${color}44`, borderBottom: 0,

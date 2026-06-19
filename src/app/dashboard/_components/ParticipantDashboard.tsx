@@ -6,7 +6,9 @@ import { signOut } from "next-auth/react";
 
 type HistoryEntry = {
   id: string;
+  sessionId: string;
   quizTitle: string;
+  coverImageUrl: string | null;
   hostName: string;
   date: string;
   score: number;
@@ -30,6 +32,12 @@ const TABS = ["Все", "На этой неделе", "Лучшие резуль
 type Tab = (typeof TABS)[number];
 
 const QUIZ_COLORS = ["#E64646", "#0077FF", "#4DC4FF", "#4BB34B", "#FFA000", "#F97316", "#A78BFA", "#14B8A6"];
+
+const AVATAR_PALETTE = ["#0077FF","#E64646","#4BB34B","#FFA000","#4DC4FF","#F97316","#14B8A6","#A78BFA"];
+function avatarBg(name: string) {
+  let h = 0; for (const c of name) h = (h * 31 + c.charCodeAt(0)) & 0xffff;
+  return AVATAR_PALETTE[h % AVATAR_PALETTE.length];
+}
 
 function quizColor(title: string) {
   let hash = 0;
@@ -113,7 +121,7 @@ export default function ParticipantDashboard({ user, history, activeSession }: P
       const weekAgo = Date.now() - 7 * 86_400_000;
       return history.filter((h) => new Date(h.date).getTime() > weekAgo);
     }
-    if (activeTab === "Лучшие результаты") return history.filter((h) => h.rank <= 3);
+    if (activeTab === "Лучшие результаты") return [...history].sort((a, b) => a.rank - b.rank || b.score - a.score);
     return history;
   })();
 
@@ -123,7 +131,7 @@ export default function ParticipantDashboard({ user, history, activeSession }: P
     <div style={{ background: "#19191A", minHeight: "100vh", color: "#E7E8EA", fontFamily: "Inter, sans-serif" }}>
 
       {/* ── Nav ── */}
-      <nav style={{
+      <nav className="app-navbar" style={{
         position: "sticky", top: 0, zIndex: 10,
         background: "rgba(25, 25, 26, 0.85)",
         backdropFilter: "blur(12px)",
@@ -149,7 +157,7 @@ export default function ParticipantDashboard({ user, history, activeSession }: P
           </div>
 
           <div style={{ display: "flex", gap: "4px" }}>
-            {(["Главная", "История"] as const).map((label) => (
+            {(["Главная"] as const).map((label) => (
               <span key={label} style={{
                 fontSize: "14px", fontWeight: 500, cursor: "pointer",
                 color: label === "Главная" ? "#E7E8EA" : "#909499",
@@ -163,7 +171,7 @@ export default function ParticipantDashboard({ user, history, activeSession }: P
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <div style={{
+          <div className="nav-role-badge" style={{
             padding: "4px 10px", borderRadius: "999px",
             background: "rgba(75,179,75,0.12)",
             fontSize: "12px", fontWeight: 600, letterSpacing: "0.02em",
@@ -175,6 +183,7 @@ export default function ParticipantDashboard({ user, history, activeSession }: P
           <div style={{ position: "relative" }}>
             <div
               onClick={() => setMenuOpen((v) => !v)}
+              className="nav-user-pill"
               style={{
                 display: "flex", alignItems: "center", gap: "10px",
                 padding: "7px 15px 7px 7px", borderRadius: "999px",
@@ -184,13 +193,13 @@ export default function ParticipantDashboard({ user, history, activeSession }: P
             >
               <div style={{
                 width: "28px", height: "28px", borderRadius: "14px",
-                background: "linear-gradient(180deg, #0077FF, #005CC4)",
+                background: avatarBg(user.name),
                 display: "flex", alignItems: "center", justifyContent: "center",
                 fontSize: "12px", fontWeight: 700, color: "#fff", flexShrink: 0,
               }}>
                 {initials}
               </div>
-              <span style={{ fontSize: "14px", fontWeight: 500 }}>{user.name}</span>
+              <span className="nav-user-name" style={{ fontSize: "14px", fontWeight: 500 }}>{user.name}</span>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
                 stroke="#76787A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
                 style={{ transform: menuOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.15s" }}>
@@ -232,11 +241,11 @@ export default function ParticipantDashboard({ user, history, activeSession }: P
       </nav>
 
       {/* ── Main content ── */}
-      <div style={{ padding: "40px 48px", display: "flex", flexDirection: "column", gap: "16px" }}>
+      <div className="dash-main part-main" style={{ padding: "40px 48px", display: "flex", flexDirection: "column", gap: "16px" }}>
 
         {/* ── Join card or Active session card ── */}
         {activeSession ? (
-          <div style={{
+          <div className="part-active-card" style={{
             position: "relative",
             borderRadius: "20px",
             background: "linear-gradient(170deg, rgba(75,179,75,0.12) 0%, rgba(75,179,75,0.06) 100%)",
@@ -275,8 +284,9 @@ export default function ParticipantDashboard({ user, history, activeSession }: P
 
             <button
               onClick={() => router.push(`/play/${activeSession.roomCode}`)}
+              className="part-active-btn"
               style={{
-                flexShrink: 0, display: "inline-flex", alignItems: "center", gap: "10px",
+                flexShrink: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "10px",
                 padding: "0 32px", height: "56px", borderRadius: "12px",
                 background: "linear-gradient(180deg, #4BB34B 0%, #3a8f3a 100%)",
                 border: "none", color: "#fff",
@@ -289,7 +299,7 @@ export default function ParticipantDashboard({ user, history, activeSession }: P
             </button>
           </div>
         ) : (
-          <div style={{
+          <div className="part-join-card" style={{
             position: "relative",
             borderRadius: "20px",
             background: "linear-gradient(170deg, rgba(0,119,255,0.14) 0%, rgba(0,92,196,0.08) 100%)",
@@ -328,8 +338,8 @@ export default function ParticipantDashboard({ user, history, activeSession }: P
               </p>
             </div>
 
-            <form onSubmit={handleJoin} style={{ width: "603px", flexShrink: 0, display: "flex", flexDirection: "column", gap: "14px" }}>
-              <div style={{ display: "flex", justifyContent: "center", gap: "10px" }}>
+            <form onSubmit={handleJoin} className="part-join-form" style={{ width: "603px", flexShrink: 0, display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div className="part-code-inputs" style={{ display: "flex", justifyContent: "center", gap: "10px" }}>
                 {code.map((ch, i) => (
                   <input
                     key={i}
@@ -339,6 +349,7 @@ export default function ParticipantDashboard({ user, history, activeSession }: P
                     onKeyDown={(e) => handleKeyDown(i, e)}
                     onPaste={handlePaste}
                     maxLength={1}
+                    className="part-code-input"
                     style={{
                       width: "92px",
                       height: "75px",
@@ -387,7 +398,7 @@ export default function ParticipantDashboard({ user, history, activeSession }: P
 
         {/* ── History section ── */}
         <div>
-          <div style={{
+          <div className="part-history-meta" style={{
             display: "flex", justifyContent: "space-between", alignItems: "center",
             padding: "16px 0 0",
           }}>
@@ -396,7 +407,7 @@ export default function ParticipantDashboard({ user, history, activeSession }: P
               <span style={{ fontWeight: 400, color: "#76787A" }}>· {history.length} сессий</span>
             </h2>
 
-            <div style={{ display: "flex", gap: "8px" }}>
+            <div className="part-tabs" style={{ display: "flex", gap: "8px" }}>
               {TABS.map((tab) => (
                 <button key={tab} onClick={() => setActiveTab(tab)} style={{
                   padding: "6px 14px", borderRadius: "6px",
@@ -428,20 +439,20 @@ export default function ParticipantDashboard({ user, history, activeSession }: P
                 boxShadow: "0 8px 24px rgba(0,0,0,0.3), inset 0 1px 0 1px rgba(255,255,255,0.04)",
                 overflow: "hidden",
               }}>
-                <div style={{
+                <div className="part-history-header" style={{
                   display: "grid",
                   gridTemplateColumns: "1.6fr 1fr 0.8fr 0.7fr 0.7fr",
                   padding: "12px 20px 13px",
                   borderBottom: "1px solid #363738",
                 }}>
                   {[
-                    { label: "Квиз", align: "left" },
-                    { label: "Хост", align: "left" },
-                    { label: "Дата", align: "left" },
-                    { label: "Счёт", align: "right" },
-                    { label: "Место", align: "right" },
-                  ].map(({ label, align }) => (
-                    <span key={label} style={{
+                    { label: "Квиз", align: "left", cls: "" },
+                    { label: "Хост", align: "left", cls: "part-history-host" },
+                    { label: "Дата", align: "left", cls: "part-history-date" },
+                    { label: "Счёт", align: "right", cls: "" },
+                    { label: "Место", align: "right", cls: "" },
+                  ].map(({ label, align, cls }) => (
+                    <span key={label} className={cls} style={{
                       fontSize: "12px", fontWeight: 600,
                       letterSpacing: "0.06em", textTransform: "uppercase",
                       color: "#76787A", textAlign: align as "left" | "right",
@@ -454,27 +465,35 @@ export default function ParticipantDashboard({ user, history, activeSession }: P
                 {filteredHistory.map((entry, i) => (
                   <div
                     key={entry.id}
+                    className="part-history-row"
+                    onClick={() => router.push(`/results/${entry.sessionId}`)}
                     style={{
                       display: "grid",
                       gridTemplateColumns: "1.6fr 1fr 0.8fr 0.7fr 0.7fr",
                       alignItems: "center",
                       padding: "14px 20px 15px",
                       borderBottom: i < filteredHistory.length - 1 ? "1px solid #363738" : "none",
+                      cursor: "pointer",
                     }}
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: "12px", minWidth: 0 }}>
                       <div style={{
                         width: "32px", height: "32px", borderRadius: "7px",
                         background: quizColor(entry.quizTitle),
-                        flexShrink: 0,
-                      }} />
+                        flexShrink: 0, overflow: "hidden",
+                      }}>
+                        {entry.coverImageUrl && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={entry.coverImageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                        )}
+                      </div>
                       <span style={{ fontSize: "14px", fontWeight: 600, color: "#E7E8EA", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {entry.quizTitle}
                       </span>
                     </div>
 
-                    <span style={{ fontSize: "14px", color: "#909499", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{entry.hostName}</span>
-                    <span style={{ fontSize: "14px", color: "#909499" }}>{formatDate(entry.date)}</span>
+                    <span className="part-history-host" style={{ fontSize: "14px", color: "#909499", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{entry.hostName}</span>
+                    <span className="part-history-date" style={{ fontSize: "14px", color: "#909499" }}>{formatDate(entry.date)}</span>
                     <span style={{ fontSize: "14px", fontWeight: 600, color: "#E7E8EA", textAlign: "right" }}>
                       {entry.score.toLocaleString()}
                     </span>
