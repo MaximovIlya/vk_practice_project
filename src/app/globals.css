@@ -64,6 +64,10 @@ select:focus, select:focus-visible {
   .review-layout { flex-direction: column !important; }
   .review-side { width: 100% !important; }
 
+  /* Run page: waiting room stacks vertically on tablet. */
+  .run-waiting-grid { grid-template-columns: 1fr !important; overflow: auto !important; }
+  .run-players-panel { border-left: none !important; border-top: 1px solid #363738 !important; max-height: 280px; }
+
   /* Quiz editor: three panes stack into one scrolling column. */
   .edit-root { height: auto !important; overflow: visible !important; }
   .edit-body { flex-direction: column !important; overflow: visible !important; }
@@ -207,4 +211,12 @@ select:focus, select:focus-visible {
 
   /* More room for the question editor on a phone. */
   .edit-main { padding: 20px 16px !important; }
+
+  /* Run page waiting room — compact on phone */
+  .run-quiz-title { display: none !important; }
+  .run-waiting-main { padding: 24px 16px !important; }
+  .run-room-code-wrap { gap: 8px !important; padding: 14px 16px !important; margin-bottom: 20px !important; border-radius: 16px !important; }
+  .run-room-code-letter { width: 48px !important; height: 64px !important; font-size: 38px !important; border-radius: 10px !important; }
+  .run-space-hint { display: none !important; }
+  .run-players-panel { max-height: 220px !important; }
 }

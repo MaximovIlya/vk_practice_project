@@ -237,8 +237,10 @@ export default function RunQuizPage() {
             </svg>
           </div>
           <span style={{ fontWeight: 800, fontSize: 20, letterSpacing: "-0.02em" }}>Pulse</span>
-          <div style={{ width: 1, height: 20, background: "#363738", marginLeft: 4 }} />
-          <span style={{ fontSize: 14, color: "#909499" }}>{quiz.title}</span>
+          <div className="run-quiz-title" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ width: 1, height: 20, background: "#363738" }} />
+            <span style={{ fontSize: 14, color: "#909499" }}>{quiz.title}</span>
+          </div>
         </div>
 
         {/* Right */}
@@ -293,10 +295,10 @@ export default function RunQuizPage() {
 
         {/* ══ WAITING ══ */}
         {phase === "WAITING" && (
-          <div style={{ flex: 1, display: "grid", gridTemplateColumns: "1fr 420px", overflow: "hidden", position: "relative" }}>
+          <div className="run-waiting-grid" style={{ flex: 1, display: "grid", gridTemplateColumns: "1fr 420px", overflow: "hidden", position: "relative" }}>
 
             {/* Main waiting area */}
-            <div style={{ padding: "40px 56px", position: "relative", overflow: "hidden", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" }}>
+            <div className="run-waiting-main" style={{ padding: "40px 56px", position: "relative", overflow: "hidden", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" }}>
               {/* Dot grid */}
               <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px)", backgroundSize: "24px 24px", pointerEvents: "none", maskImage: "radial-gradient(ellipse at center, black 30%, transparent 80%)", WebkitMaskImage: "radial-gradient(ellipse at center, black 30%, transparent 80%)" }} />
               {/* Glow blobs */}
@@ -316,7 +318,7 @@ export default function RunQuizPage() {
                 </div>
 
                 {/* Room code card */}
-                <div style={{
+                <div className="run-room-code-wrap" style={{
                   display: "inline-flex", gap: 14,
                   padding: "22px 28px",
                   background: "rgba(35,35,36,0.7)",
@@ -328,7 +330,7 @@ export default function RunQuizPage() {
                   marginBottom: 32,
                 }}>
                   {quizSession.roomCode.split("").map((ch, i) => (
-                    <div key={i} style={{
+                    <div key={i} className="run-room-code-letter" style={{
                       width: 88, height: 110,
                       background: "linear-gradient(180deg,#232324 0%,#19191A 100%)",
                       border: "1px solid #363738",
@@ -348,10 +350,10 @@ export default function RunQuizPage() {
                     <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="4.5" y="4.5" width="8" height="8" rx="1.5" stroke="currentColor" strokeWidth="1.2"/><path d="M9 4.5V3a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1h1.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
                     {copied ? "Скопировано!" : "Скопировать код"}
                   </button>
-                  <button style={{ display: "flex", alignItems: "center", gap: 8, height: 40, padding: "0 18px", borderRadius: 8, border: "1px solid #363738", background: "#2C2D2E", color: "#E7E8EA", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>
+                  {/* <button style={{ display: "flex", alignItems: "center", gap: 8, height: 40, padding: "0 18px", borderRadius: 8, border: "1px solid #363738", background: "#2C2D2E", color: "#E7E8EA", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="3" height="3"/></svg>
                     Показать QR
-                  </button>
+                  </button> */}
                 </div>
 
                 {/* Start button */}
@@ -378,7 +380,7 @@ export default function RunQuizPage() {
                   Начать квиз ({players.length} {plural(players.length, ["игрок", "игрока", "игроков"])})
                 </button>
 
-                <div style={{ display: "flex", alignItems: "center", gap: 6, color: "#76787A", fontSize: 13, marginTop: 10 }}>
+                <div className="run-space-hint" style={{ display: "flex", alignItems: "center", gap: 6, color: "#76787A", fontSize: 13, marginTop: 10 }}>
                   Нажмите{" "}
                   <kbd style={{ background: "#2C2D2E", padding: "2px 7px", borderRadius: 4, fontSize: 11, border: "1px solid #363738", fontFamily: "monospace" }}>Пробел</kbd>
                   {" "}для старта
@@ -387,7 +389,7 @@ export default function RunQuizPage() {
             </div>
 
             {/* Right: players list */}
-            <div style={{ borderLeft: "1px solid #363738", background: "#19191A", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+            <div className="run-players-panel" style={{ borderLeft: "1px solid #363738", background: "#19191A", display: "flex", flexDirection: "column", overflow: "hidden" }}>
               {/* Panel header */}
               <div style={{ padding: "20px 24px", borderBottom: "1px solid #363738", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
                 <div>
