@@ -70,7 +70,7 @@ export default function ResultsPage() {
     <div style={{ minHeight: "100vh", background: "#19191A", fontFamily: "Inter, sans-serif", color: "#E7E8EA", display: "flex", flexDirection: "column" }}>
 
       {/* NavBar */}
-      <nav style={{ height: 64, padding: "0 32px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #363738", background: "rgba(25,25,26,0.85)", backdropFilter: "blur(12px)", flexShrink: 0, position: "relative", zIndex: 5 }}>
+      <nav className="res-nav" style={{ height: 64, padding: "0 32px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #363738", background: "rgba(25,25,26,0.85)", backdropFilter: "blur(12px)", flexShrink: 0, position: "relative", zIndex: 5 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 32 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{ width: 28, height: 28, borderRadius: 8, background: "linear-gradient(180deg,#0077FF,#005CC4)", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -78,7 +78,7 @@ export default function ResultsPage() {
             </div>
             <span style={{ fontWeight: 800, fontSize: 20, letterSpacing: "-0.02em" }}>Pulse</span>
           </div>
-          <div style={{ display: "flex", gap: 4 }}>
+          <div className="res-nav-links" style={{ display: "flex", gap: 4 }}>
             {(auth?.user?.role === "PARTICIPANT"
               ? ["Главная", "История"]
               : ["Главная", "Мои квизы"]
@@ -88,42 +88,38 @@ export default function ResultsPage() {
           </div>
         </div>
         {auth?.user && (
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ padding: "4px 10px", borderRadius: 999, background: "rgba(0,119,255,0.12)", fontSize: 12, fontWeight: 600, color: "#71AAEB", letterSpacing: "0.02em" }}>
+          <div className="res-nav-right" style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div className="res-role-badge" style={{ padding: "4px 10px", borderRadius: 999, background: "rgba(0,119,255,0.12)", fontSize: 12, fontWeight: 600, color: "#71AAEB", letterSpacing: "0.02em" }}>
               {auth.user.role === "PARTICIPANT" ? "УЧАСТНИК" : "ОРГАНИЗАТОР"}
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 12px 5px 5px", borderRadius: 999, background: "#2C2D2E", border: "1px solid #363738" }}>
-              <div style={{ width: 28, height: 28, borderRadius: "50%", background: avatarBg(auth.user.name ?? ""), display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "#fff" }}>
+              <div style={{ width: 28, height: 28, borderRadius: "50%", background: auth.user.role === "ORGANIZER" ? "linear-gradient(180deg,#0077FF,#005CC4)" : avatarBg(auth.user.name ?? ""), display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "#fff" }}>
                 {initials(auth.user.name ?? "?")}
               </div>
-              <span style={{ fontSize: 14, fontWeight: 500 }}>{auth.user.name}</span>
+              <span className="res-user-name" style={{ fontSize: 14, fontWeight: 500 }}>{auth.user.name}</span>
             </div>
           </div>
         )}
       </nav>
 
       {/* Sub-header */}
-      <div style={{ padding: "28px 48px", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
-        <div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#76787A", marginBottom: 6 }}>
+      <div className="res-subheader" style={{ padding: "28px 48px", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
+        <div className="res-subheader-info">
+          <div className="res-subheader-meta" style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#76787A", marginBottom: 6, flexWrap: "wrap" }}>
             <span>{data.quizTitle}</span>
             <span>·</span>
             <span>Проведён {formatDate(data.startedAt)}</span>
             <span>·</span>
             <span style={{ fontVariantNumeric: "tabular-nums" }}>{data.playerCount} {plural(data.playerCount, ["игрок", "игрока", "игроков"])}</span>
           </div>
-          <div style={{ fontSize: 34, fontWeight: 800, letterSpacing: "-0.02em", display: "flex", alignItems: "center", gap: 10 }}>
+          <div className="res-subheader-title" style={{ fontSize: 34, fontWeight: 800, letterSpacing: "-0.02em", display: "flex", alignItems: "center", gap: 10 }}>
             Итоговые результаты
             <span style={{ background: "linear-gradient(135deg,#FFA000,#E64646)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>🏆</span>
           </div>
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
-          <button style={{ display: "flex", alignItems: "center", gap: 6, height: 40, padding: "0 16px", borderRadius: 8, border: "none", background: "transparent", color: "#909499", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>
-            {/* <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> */}
-            {/* Экспорт CSV */}
-          </button>
+        <div className="res-subheader-actions" style={{ display: "flex", gap: 8 }}>
           {auth?.user?.role !== "PARTICIPANT" && data && (
-            <button onClick={() => router.push(`/quiz/${data.quizId}/run?reset=1`)} style={{ display: "flex", alignItems: "center", gap: 6, height: 40, padding: "0 16px", borderRadius: 8, border: "1px solid #363738", background: "#2C2D2E", color: "#E7E8EA", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>
+            <button onClick={() => router.push(`/quiz/${data.quizId}/run?reset=1`)} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, height: 40, padding: "0 16px", borderRadius: 8, border: "1px solid #363738", background: "#2C2D2E", color: "#E7E8EA", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
               Запустить снова
             </button>
@@ -135,32 +131,32 @@ export default function ResultsPage() {
       </div>
 
       {/* Body */}
-      <div style={{ flex: 1, padding: "0 48px 40px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 32, overflow: "hidden", position: "relative" }}>
+      <div className="res-body" style={{ flex: 1, padding: "0 48px 40px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 32, overflow: "hidden", position: "relative" }}>
         {/* Glow blobs */}
         <div style={{ position: "absolute", width: 500, height: 500, borderRadius: "50%", background: "radial-gradient(circle,rgba(255,160,0,0.12) 0%,transparent 60%)", top: "calc(40% - 250px)", left: "calc(25% - 250px)", filter: "blur(40px)", pointerEvents: "none" }} />
         <div style={{ position: "absolute", width: 400, height: 400, borderRadius: "50%", background: "radial-gradient(circle,rgba(0,119,255,0.15) 0%,transparent 60%)", top: "calc(60% - 200px)", left: "calc(75% - 200px)", filter: "blur(40px)", pointerEvents: "none" }} />
 
         {/* ── Podium ── */}
-        <div style={{ background: "#232324", border: "1px solid #363738", borderRadius: 20, padding: "28px 28px 0", display: "flex", flexDirection: "column", position: "relative", overflow: "hidden", zIndex: 1 }}>
+        <div className="res-podium-card" style={{ background: "#232324", border: "1px solid #363738", borderRadius: 20, padding: "28px 28px 0", display: "flex", flexDirection: "column", position: "relative", overflow: "hidden", zIndex: 1 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
             <div style={{ fontSize: 12, color: "#76787A", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600 }}>Пьедестал</div>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFA000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
           </div>
 
-          <div style={{ flex: 1, display: "flex", alignItems: "flex-end", justifyContent: "center", gap: 12, paddingTop: 20 }}>
+          <div className="res-podium-stage" style={{ flex: 1, display: "flex", alignItems: "flex-end", justifyContent: "center", gap: 12, paddingTop: 20 }}>
             {top3.map((p) => {
               const isFirst = p.rank === 1;
               const color = PODIUM_COLORS[p.rank - 1];
               const height = pillarHeights[p.rank] ?? 130;
               return (
-                <div key={p.rank} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center" }}>
+                <div key={p.rank} className="res-podium-item" style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", alignItems: "center" }}>
                   <div style={{ position: "relative", marginBottom: 12 }}>
                     {isFirst && (
                       <svg width="28" height="28" viewBox="0 0 24 24" fill="#FFA000" stroke="#FFA000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ position: "absolute", top: -30, left: "50%", transform: "translateX(-50%) rotate(-8deg)" }}>
                         <path d="M3 7l4 4 5-7 5 7 4-4-2 12H5z"/>
                       </svg>
                     )}
-                    <div style={{
+                    <div className={isFirst ? "res-podium-avatar res-podium-avatar-first" : "res-podium-avatar"} style={{
                       width: isFirst ? 76 : 60, height: isFirst ? 76 : 60,
                       borderRadius: "50%", background: `linear-gradient(135deg,${color},${color}99)`,
                       display: "flex", alignItems: "center", justifyContent: "center",
@@ -171,21 +167,21 @@ export default function ResultsPage() {
                       {initials(p.name)}
                     </div>
                   </div>
-                  <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 2, textAlign: "center" }}>{p.name}</div>
-                  <div style={{ fontSize: 12, color: "#76787A", marginBottom: 10, fontVariantNumeric: "tabular-nums" }}>{p.correct}/{p.total} правильно</div>
+                  <div className="res-podium-name" style={{ fontSize: 15, fontWeight: 700, marginBottom: 2, textAlign: "center", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100%" }}>{p.name}</div>
+                  <div className="res-podium-sub" style={{ fontSize: 12, color: "#76787A", marginBottom: 10, fontVariantNumeric: "tabular-nums" }}>{p.correct}/{p.total} правильно</div>
 
-                  <div style={{
+                  <div className="res-podium-pillar" style={{
                     width: "100%", height,
                     background: `linear-gradient(180deg,${color}33 0%,${color}11 100%)`,
                     border: `1px solid ${color}44`, borderBottom: 0,
                     borderRadius: "12px 12px 0 0",
                     display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start",
-                    paddingTop: 20,
+                    paddingTop: 20, overflow: "hidden",
                   }}>
-                    <div style={{ fontSize: isFirst ? 60 : 46, fontWeight: 900, lineHeight: 1, color, letterSpacing: "-0.04em", marginBottom: 6, fontVariantNumeric: "tabular-nums" }}>
+                    <div className="res-podium-rank" style={{ fontSize: isFirst ? 60 : 46, fontWeight: 900, lineHeight: 1, color, letterSpacing: "-0.04em", marginBottom: 6, fontVariantNumeric: "tabular-nums" }}>
                       {p.rank}
                     </div>
-                    <div style={{ fontSize: isFirst ? 22 : 17, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{p.score.toLocaleString()}</div>
+                    <div className="res-podium-score" style={{ fontSize: isFirst ? 22 : 17, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{p.score.toLocaleString()}</div>
                     <div style={{ fontSize: 11, color: "#76787A", textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600, marginTop: 2 }}>очков</div>
                   </div>
                 </div>
@@ -206,13 +202,13 @@ export default function ResultsPage() {
 
           <div style={{ flex: 1, background: "#232324", border: "1px solid #363738", borderRadius: 12, overflow: "hidden", display: "flex", flexDirection: "column" }}>
             {/* Header row */}
-            <div style={{ display: "grid", gridTemplateColumns: "44px 1fr 70px 80px", padding: "10px 18px", fontSize: 11, fontWeight: 600, color: "#76787A", textTransform: "uppercase", letterSpacing: "0.06em", borderBottom: "1px solid #363738" }}>
-              <div>#</div><div>Игрок</div><div style={{ textAlign: "right" }}>Правильно</div><div style={{ textAlign: "right" }}>Очки</div>
+            <div className="res-lb-header" style={{ display: "grid", gridTemplateColumns: "44px 1fr 70px 80px", padding: "10px 18px", fontSize: 11, fontWeight: 600, color: "#76787A", textTransform: "uppercase", letterSpacing: "0.06em", borderBottom: "1px solid #363738" }}>
+              <div>#</div><div>Игрок</div><div className="res-lb-correct" style={{ textAlign: "right" }}>Правильно</div><div style={{ textAlign: "right" }}>Очки</div>
             </div>
             {/* Rows */}
             <div style={{ flex: 1, overflowY: "auto" }}>
               {data.leaderboard.map((p, i) => (
-                <div key={p.userId} style={{
+                <div key={p.userId} className="res-lb-row" style={{
                   display: "grid", gridTemplateColumns: "44px 1fr 70px 80px",
                   padding: "11px 18px", alignItems: "center",
                   borderBottom: i < data.leaderboard.length - 1 ? "1px solid #363738" : "none",
@@ -235,7 +231,7 @@ export default function ResultsPage() {
                       <span style={{ padding: "2px 8px", borderRadius: 999, background: "rgba(0,119,255,0.15)", fontSize: 10, fontWeight: 700, color: "#71AAEB", letterSpacing: "0.04em" }}>ВЫ</span>
                     )}
                   </div>
-                  <div style={{ textAlign: "right", color: "#909499", fontSize: 14, fontVariantNumeric: "tabular-nums" }}>{p.correct}/{p.total}</div>
+                  <div className="res-lb-correct" style={{ textAlign: "right", color: "#909499", fontSize: 14, fontVariantNumeric: "tabular-nums" }}>{p.correct}/{p.total}</div>
                   <div style={{ textAlign: "right", fontWeight: 700, fontSize: 15, fontVariantNumeric: "tabular-nums" }}>{p.score.toLocaleString()}</div>
                 </div>
               ))}

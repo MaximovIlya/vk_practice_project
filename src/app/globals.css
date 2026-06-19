@@ -68,6 +68,15 @@ select:focus, select:focus-visible {
   .run-waiting-grid { grid-template-columns: 1fr !important; overflow: auto !important; }
   .run-players-panel { border-left: none !important; border-top: 1px solid #363738 !important; max-height: 280px; }
 
+  /* Run page: active/reveal — hide leaderboard sidebar, expand left column. */
+  .run-active-body { grid-template-columns: 1fr !important; overflow: auto !important; padding: 20px 24px 32px !important; }
+  .run-leaderboard { display: none !important; }
+  .run-timer-section { padding: 16px 24px 0 !important; }
+
+  /* Results page: stack podium + leaderboard vertically on tablet. */
+  .res-subheader { padding: 20px 24px !important; }
+  .res-body { grid-template-columns: 1fr !important; overflow: auto !important; padding: 0 24px 40px !important; }
+
   /* Quiz editor: three panes stack into one scrolling column. */
   .edit-root { height: auto !important; overflow: visible !important; }
   .edit-body { flex-direction: column !important; overflow: visible !important; }
@@ -211,6 +220,54 @@ select:focus, select:focus-visible {
 
   /* More room for the question editor on a phone. */
   .edit-main { padding: 20px 16px !important; }
+
+  /* Run page active/reveal phase — single column, compact on phone */
+  .run-timer-section { padding: 12px 16px 0 !important; }
+  .run-active-body { padding: 16px 16px 24px !important; }
+  .run-question-card { padding: 16px 20px !important; }
+  .run-question-text { font-size: 24px !important; }
+  /* Single-column answer grid so tiles are wide enough for text */
+  .run-answer-grid { grid-template-columns: 1fr !important; gap: 10px !important; }
+  .run-answer-tile { min-height: 72px !important; padding: 16px 80px 16px 56px !important; font-size: 16px !important; border-radius: 12px !important; }
+  .run-answer-letter { width: 36px !important; height: 36px !important; font-size: 15px !important; left: 10px !important; border-radius: 8px !important; }
+  .run-answer-stats { width: 60px !important; right: 10px !important; }
+  .run-answer-vote { font-size: 18px !important; }
+
+  /* Results page — compact nav, centered subheader, equal buttons, shrunk podium */
+  .res-nav { padding: 0 16px !important; height: 56px !important; }
+  .res-nav-links { display: none !important; }
+  .res-role-badge { display: none !important; }
+  .res-user-name { display: none !important; }
+  .res-subheader {
+    padding: 16px 16px !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 12px !important;
+    text-align: center !important;
+  }
+  .res-subheader-info { width: 100% !important; }
+  .res-subheader-meta { justify-content: center !important; }
+  .res-subheader-title { font-size: 22px !important; justify-content: center !important; }
+  .res-subheader-actions { width: 100% !important; }
+  .res-subheader-actions > button { flex: 1 !important; }
+  .res-body { padding: 0 16px 32px !important; overflow-x: hidden !important; }
+  /* Podium: shrink avatars, rank numbers, pillars on phone */
+  .res-podium-card { min-height: 0 !important; }
+  .res-podium-stage { gap: 6px !important; padding-top: 8px !important; }
+  .res-podium-avatar { width: 44px !important; height: 44px !important; font-size: 14px !important; }
+  .res-podium-avatar-first { width: 56px !important; height: 56px !important; font-size: 18px !important; }
+  .res-podium-name { font-size: 12px !important; }
+  .res-podium-sub { display: none !important; }
+  .res-podium-rank { font-size: 32px !important; }
+  .res-podium-score { font-size: 13px !important; }
+  .res-podium-pillar { max-height: 110px !important; padding-top: 12px !important; }
+  /* Leaderboard: hide "Правильно" column, compress rank/score */
+  .res-lb-correct { display: none !important; }
+  .res-lb-header { grid-template-columns: 32px 1fr 64px !important; padding: 8px 12px !important; }
+  .res-lb-row { grid-template-columns: 32px 1fr 64px !important; padding: 10px 12px !important; }
+
+  /* My quizzes: hide body create button on mobile (bottom bar takes over) */
+  .myquizzes-create-btn { display: none !important; }
 
   /* Run page waiting room — compact on phone */
   .run-quiz-title { display: none !important; }

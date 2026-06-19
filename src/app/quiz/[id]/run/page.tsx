@@ -448,7 +448,7 @@ export default function RunQuizPage() {
 
               {/* Timer bar strip */}
               {phase === "ACTIVE" && (
-                <div style={{ padding: "20px 56px 0", flexShrink: 0 }}>
+                <div className="run-timer-section" style={{ padding: "20px 56px 0", flexShrink: 0 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
                     <div style={{ flex: 1, height: 10, background: "rgba(255,255,255,0.06)", borderRadius: 5, overflow: "hidden", position: "relative" }}>
                       <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${pct}%`, background: `linear-gradient(90deg,${timerColor}aa,${timerColor})`, borderRadius: 5, boxShadow: `0 0 20px ${timerColor}80`, transition: "width 0.25s linear" }} />
@@ -459,10 +459,10 @@ export default function RunQuizPage() {
               )}
 
               {/* Main content grid */}
-              <div style={{ flex: 1, padding: "28px 56px 40px", display: "grid", gridTemplateColumns: "1fr 360px", gap: 32, overflow: "hidden" }}>
+              <div className="run-active-body" style={{ flex: 1, padding: "28px 56px 40px", display: "grid", gridTemplateColumns: "1fr 360px", gap: 32, overflow: "hidden" }}>
 
                 {/* Left: question + tiles */}
-                <div style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
+                <div className="run-active-left" style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
                   {/* Meta + question text */}
                   <div style={{ flexShrink: 0, marginBottom: 28 }}>
                     {phase === "REVEAL" && (
@@ -476,21 +476,17 @@ export default function RunQuizPage() {
                     </div>
                     {currentQuestion.imageUrl && (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={currentQuestion.imageUrl}
-                        alt=""
-                        style={{ display: "block", margin: "0 auto 16px", maxHeight: 280, maxWidth: "100%", borderRadius: 12, objectFit: "contain" }}
-                      />
+                      <img src={currentQuestion.imageUrl} alt="" style={{ display: "block", margin: "0 auto 16px", maxHeight: 280, maxWidth: "100%", borderRadius: 12, objectFit: "contain" }} />
                     )}
-                    <div style={{ background: "#232324", border: "1px solid #363738", borderRadius: 16, padding: "28px 44px" }}>
-                      <div style={{ fontSize: 44, fontWeight: 700, letterSpacing: "-0.02em", lineHeight: 1.15 }}>
+                    <div className="run-question-card" style={{ background: "#232324", border: "1px solid #363738", borderRadius: 16, padding: "28px 44px" }}>
+                      <div className="run-question-text" style={{ fontSize: 44, fontWeight: 700, letterSpacing: "-0.02em", lineHeight: 1.15 }}>
                         {currentQuestion.text}
                       </div>
                     </div>
                   </div>
 
                   {/* Answer tiles 2×2 grid */}
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, flex: 1, alignContent: "start" }}>
+                  <div className="run-answer-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, flex: 1, alignContent: "start" }}>
                     {currentQuestion.answers.map((ans, ai) => {
                       const voteCount = votes[ans.id] ?? 0;
                       const votePct = Math.round((voteCount / totalVotes) * 100);
@@ -499,35 +495,32 @@ export default function RunQuizPage() {
                       const dimmed = isReveal && !isCorrect;
 
                       return (
-                        <div key={ans.id} style={{
+                        <div key={ans.id} className="run-answer-tile" style={{
                           position: "relative", overflow: "hidden",
                           borderRadius: 14, minHeight: 130,
                           padding: "28px 120px 28px 88px",
                           display: "flex", alignItems: "center",
                           fontSize: 22, fontWeight: 600, color: "white",
-                          border: "1px solid rgba(255,255,255,0.08)",
+                          border: isReveal && isCorrect ? "3px solid #4BB34B" : "1px solid rgba(255,255,255,0.08)",
                           background: ANS_GRADIENTS[ai % 4],
                           filter: dimmed ? "grayscale(0.7) brightness(0.45)" : "none",
-                          boxShadow: isReveal && isCorrect ? "0 0 0 3px #4BB34B, 0 0 40px rgba(75,179,75,0.5)" : "none",
-                          transition: "filter 0.3s, box-shadow 0.3s",
+                          boxShadow: isReveal && isCorrect ? "inset 0 0 32px rgba(75,179,75,0.3)" : "none",
+                          transition: "filter 0.3s, box-shadow 0.3s, border-color 0.3s",
                         }}>
-                          {/* Letter chip */}
-                          <div style={{ position: "absolute", left: 20, top: "50%", transform: "translateY(-50%)", width: 52, height: 52, borderRadius: 12, background: "rgba(255,255,255,0.18)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, fontWeight: 800 }}>
+                          <div className="run-answer-letter" style={{ position: "absolute", left: 20, top: "50%", transform: "translateY(-50%)", width: 52, height: 52, borderRadius: 12, background: "rgba(255,255,255,0.18)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, fontWeight: 800 }}>
                             {ANS_LETTERS[ai % 4]}
                           </div>
-                          {/* Answer text */}
-                          <span style={{ flex: 1 }}>{ans.text}</span>
-                          {/* Right: count + bar */}
-                          <div style={{ position: "absolute", right: 14, top: 14, bottom: 14, width: 84, display: "flex", flexDirection: "column", alignItems: "flex-end", justifyContent: "space-between" }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <span style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>{ans.text}</span>
+                          <div className="run-answer-stats" style={{ position: "absolute", right: 14, top: 14, bottom: 14, width: 84, display: "flex", flexDirection: "column", alignItems: "flex-end", justifyContent: "space-between", overflow: "hidden" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
                               {isReveal && isCorrect && (
-                                <div style={{ width: 24, height: 24, borderRadius: "50%", background: "white", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                <div style={{ width: 24, height: 24, borderRadius: "50%", background: "white", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4BB34B" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                                 </div>
                               )}
-                              <span style={{ fontSize: 28, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{voteCount}</span>
+                              <span className="run-answer-vote" style={{ fontSize: 28, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{voteCount}</span>
                             </div>
-                            <div style={{ width: 80, height: 6, background: "rgba(0,0,0,0.3)", borderRadius: 3, overflow: "hidden" }}>
+                            <div className="run-answer-bar" style={{ width: "100%", height: 6, background: "rgba(0,0,0,0.3)", borderRadius: 3, overflow: "hidden" }}>
                               <div style={{ width: `${votePct}%`, height: "100%", background: "white", transition: "width 0.4s ease" }} />
                             </div>
                           </div>
@@ -535,11 +528,10 @@ export default function RunQuizPage() {
                       );
                     })}
                   </div>
-
                 </div>
 
                 {/* Right: live standings card */}
-                <div style={{ background: "#232324", border: "1px solid #363738", borderRadius: 16, boxShadow: "0 1px 0 rgba(255,255,255,0.04) inset, 0 8px 24px rgba(0,0,0,0.3)", padding: 20, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+                <div className="run-leaderboard" style={{ background: "#232324", border: "1px solid #363738", borderRadius: 16, boxShadow: "0 1px 0 rgba(255,255,255,0.04) inset, 0 8px 24px rgba(0,0,0,0.3)", padding: 20, display: "flex", flexDirection: "column", overflow: "hidden" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexShrink: 0 }}>
                     <div style={{ fontSize: 14, fontWeight: 600 }}>Турнирная таблица</div>
                     <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 10px", borderRadius: 999, background: "rgba(75,179,75,0.12)", border: "1px solid rgba(75,179,75,0.3)", fontSize: 12, fontWeight: 600, color: "#4BB34B" }}>
