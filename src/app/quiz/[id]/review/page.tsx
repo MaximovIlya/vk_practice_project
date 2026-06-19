@@ -420,11 +420,11 @@ export default function ReviewPage() {
                   <span style={{ fontSize: 13, fontWeight: 600, color: "#E7E8EA" }}>{value}</span>
                 </div>
               ))}
-              {quiz.description && (
+              {/* {quiz.description && (
                 <div style={{ padding: "10px 20px" }}>
                   <span style={{ fontSize: 12, color: "#76787A" }}>{quiz.description}</span>
                 </div>
-              )}
+              )} */}
             </div>
           </div>
         </div>
