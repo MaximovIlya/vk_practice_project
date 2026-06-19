@@ -1,36 +1,116 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Quiz Platform
 
-## Getting Started
+Веб-приложение для проведения квизов в реальном времени. Организаторы создают квизы и управляют сессиями, участники подключаются по коду комнаты и отвечают на вопросы вживую.
 
-First, run the development server:
+**Демо:** https://vk-practice-project.vercel.app/login
+
+## Стек технологий
+
+| Слой | Технология |
+|---|---|
+| Frontend | Next.js 14 (App Router), React 18, Tailwind CSS |
+| Backend | Next.js API Routes, Socket.IO |
+| База данных | PostgreSQL + Prisma ORM |
+| Аутентификация | NextAuth.js (JWT, Google OAuth) |
+| Хранилище файлов | Vercel Blob |
+
+## Возможности
+
+**Организатор**
+- Регистрация и вход (email/пароль или Google)
+- Создание квиза: название, категория, сложность, теги, обложка
+- Добавление вопросов: текст или изображение, одиночный / множественный выбор, таймер и баллы на вопрос
+- Запуск сессии — генерация 6-значного кода комнаты
+- Управление ходом квиза в реальном времени: переключение вопросов, просмотр лидерборда
+- Личный кабинет: список квизов, история сессий, результаты
+
+**Участник**
+- Регистрация и вход
+- Подключение к активному квизу по коду комнаты
+- Ответы на вопросы в режиме реального времени (ответ принимается только пока вопрос активен)
+- Просмотр лидерборда по завершении квиза
+- Личный кабинет: история участия и набранные баллы
+
+## Запуск
+
+### Требования
+- Node.js 18+
+- PostgreSQL
+
+### Установка
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone <repo-url>
+cd vk_practice
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Создайте файл `.env`:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```env
+DATABASE_URL=postgresql://user:password@localhost:5432/quiz_db
+NEXTAUTH_SECRET=your-secret-key
+NEXTAUTH_URL=http://localhost:3000
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+# Google OAuth (опционально)
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
 
-## Learn More
+# Vercel Blob (для загрузки изображений)
+BLOB_READ_WRITE_TOKEN=...
+```
 
-To learn more about Next.js, take a look at the following resources:
+Применить миграции и запустить:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npx prisma migrate dev
+npm run dev
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Приложение будет доступно по адресу [http://localhost:3000](http://localhost:3000).
 
-## Deploy on Vercel
+## Структура проекта
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```
+vk_practice/
+├── prisma/
+│   └── schema.prisma          # Модели БД
+├── public/
+│   └── uploads/               # Загруженные изображения
+├── src/
+│   ├── app/                   # Next.js App Router
+│   │   ├── (auth)/login/      # Вход
+│   │   ├── (auth)/register/   # Регистрация
+│   │   ├── dashboard/         # Личный кабинет
+│   │   ├── quiz/create/       # Создание квиза
+│   │   ├── quiz/[id]/edit/    # Редактирование квиза
+│   │   ├── quiz/[id]/run/     # Проведение квиза (организатор)
+│   │   ├── play/[code]/       # Участие в квизе
+│   │   └── results/[sessionId]/ # Результаты сессии
+│   ├── components/            # UI-компоненты
+│   ├── lib/                   # Prisma client, NextAuth config, Socket.IO helper
+│   └── server/                # Socket.IO сервер
+├── server.ts                  # Кастомный Node-сервер (Next.js + Socket.IO)
+└── .env                       # Переменные окружения (не коммитится)
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## WebSocket события
+
+| Событие | Направление | Описание |
+|---|---|---|
+| `join-room` | клиент → сервер | Участник входит в сессию по коду |
+| `start-quiz` | организатор → сервер | Начало квиза |
+| `next-question` | организатор → сервер | Следующий вопрос |
+| `submit-answer` | участник → сервер | Отправка ответа |
+| `question-ended` | сервер → всем | Время вышло, показ правильных ответов |
+| `score-update` | сервер → всем | Обновление лидерборда |
+| `quiz-finished` | сервер → всем | Квиз завершён, финальные результаты |
+
+## Скрипты
+
+```bash
+npm run dev    # Запуск в режиме разработки (tsx server.ts)
+npm run build  # Сборка (migrate deploy + prisma generate + next build)
+npm run start  # Запуск production-сборки
+npm run lint   # ESLint
+```
